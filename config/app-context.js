@@ -6,7 +6,7 @@ function AppProvider({children}){
     const [UID,setUserUID] = useState('trigger');
 
     return (
-        <AppContext.Provider value={UID}>
+        <AppContext.Provider value={{UID}}>
             {children}
         </AppContext.Provider>
     )
