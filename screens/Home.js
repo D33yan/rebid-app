@@ -26,13 +26,16 @@ import { Ionicons } from "@expo/vector-icons";
 const Tab = createBottomTabNavigator();
 
 function MyHome({navigation}) {
-    const {UID} = useContext(AppContext);
-    console.log('context>>>>',UID);
+    const {logout} = useContext(AppContext);
+    
 
     return (
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
                 <View style={styles.header}>
+                   <TouchableOpacity>
+                        <Text onPress={logout}>Try Logout</Text>
+                   </TouchableOpacity>
                     <Text style={styles.brandName}>Rebid</Text>
                 </View>
 
@@ -165,6 +168,9 @@ const styles = StyleSheet.create({
     },
     header:{
         flex:0.5,
+        flexDirection:"row",
+        justifyContent:"space-between",
+        alignItems:"center"
     },
     brandName:{
         fontSize:42,
