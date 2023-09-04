@@ -5,13 +5,19 @@ const AppContext = createContext()
 function AppProvider({children}){
     const [UID,setUserUID] = useState('trigger');
     const [userToken,setUserToken] = useState(null)
-    const [isLoading,setUserLoading] = useState(false);
+    const [isLoading,setIsLoading] = useState(false);
 
     const login = () =>{
-        
+        setIsLoading(true);
+        setUserToken('Trigger');
+        setIsLoading(false)
     }
 
-    const logout = () =>{}
+    const logout = () =>{
+        setIsLoading(true);
+        setUserToken('null');
+        setIsLoading(false)
+    }
 
     const isLoggedIn = () =>{}
 

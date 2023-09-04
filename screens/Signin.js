@@ -1,4 +1,5 @@
 import { useContext } from 'react';
+import { AppContext } from '../config/app-context';
 import { 
     View,
     Text,
@@ -22,6 +23,7 @@ const schema = yup.object().shape({
 });
 
 export function Signin({navigation}) {
+    const {login} = useContext(AppContext)
 
     const handleSignin = async (email,pass) => {
         await signInWithEmailAndPassword(authentication,email,pass)
@@ -87,7 +89,7 @@ export function Signin({navigation}) {
                             buttonColor={theme.colors.navy}
                             textColor={theme.colors.dullRed0}
                             style={{paddingVertical:8}}
-                            onPress={()=> navigation.navigate('my-home')}>Sign in</Button>
+                            onPress={login}>Sign in</Button>
                             </>
                         )}
                     </Formik>

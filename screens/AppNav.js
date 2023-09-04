@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { AppContext } from "../config/app-context";
 import { NavigationContainer } from "@react-navigation/native";
-import { StackNavigation } from "./stack-navigation";
+import { StackNavigation} from './stack-navigation'
 import { Home } from "./Home";
 import { ScreenLoaderIndicator } from "../utilities/screen-loader-indicator";
 
