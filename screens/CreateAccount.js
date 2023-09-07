@@ -1,11 +1,3 @@
-/*
-PARTS WITH CHANGES
-
-1. All TextInput ===>> changed all onChange to onChangeText
-2. {({ handleChange, handleBlur, handleSubmit, values, touched }) ===>> added errors
-3. <Text style={styles.errorText}>error</Text> ===>> some logic
-*/
-
 import { 
     View,
     Text,
@@ -18,8 +10,8 @@ import {
 } from 'react-native';
 import { TextInput,Button } from 'react-native-paper';
 import { Formik } from 'formik';
-import { theme } from '../config/theme';
 import * as yup from 'yup';
+import { theme } from '../config/theme';
 import { authentication } from '../config/firebase.config';
 import { createUserWithEmailAndPassword,onAuthStateChanged } from 'firebase/auth';
 import { db } from '../config/firebase.config';
@@ -35,39 +27,44 @@ const schema = yup.object().shape({
 });
 
 export function CreateAccount({navigation}) {
-    const handleCreateAccount = async (email,pass,fName,lName) =>{
-        await createUserWithEmailAndPassword(authentication,email,pass)
-        .then(()=> {
-            Alert.alert(
-                'Status Report',
-                'Your account was created successfully',
-                [{
-                    text:'proceed',
-                    onPress:()=> navigation.navigate('my-home')
-                }]
-            );
 
-            onAuthStateChanged(authentication,(user)=>{
+    const handleCreateAccount = async (email,pass,fName,lName) => {
+        await createUserWithEmailAndPassword(authentication,email,pass)
+        .then(() => {            
+            onAuthStateChanged(authentication,(user) => {
                 const uid = user.uid;
 
-                setDoc(doc(db,'users',uid),{
+                const res = setDoc(doc(db,'users',uid),{
                     firstName:fName,
                     lastName:lName,
                     email:email,
                     createdAt:new Date().getTime(),
-                })
+                });
+
+                res 
+                ?
+                Alert.alert(
+                    'Report',
+                    'Success! You can now sign in to your new account',
+                    [{
+                        text:'Proceed',
+                        onPress:() => navigation.navigate('signin')
+                    }]
+                )
+                : (e) => console.log('auth successfull BUT failed to write to firestore',e)
             })
         })
-        .catch((e)=> Alert.alert(
+        .catch((e) => Alert.alert(
             'Status Report',
-            'An error has ocuured!',
+            'An error has occured!',
             [{
                 text:'Dismiss',
                 onPress:console.error(e)
             }]
         ))
     }
-    return (    
+
+    return (
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
                 <Text style={styles.brandName}>Rebid</Text>
@@ -77,7 +74,7 @@ export function CreateAccount({navigation}) {
                         initialValues={{ fName:'',lName:'',email:'',password:'',passwordConfirmation:'' }}
                         onSubmit={values => {
                             handleCreateAccount(values.email,values.password,values.fName,values.lName)
-                        } }
+                        }}
                         validationSchema={schema}
                     >
                         {({ handleChange, handleBlur, handleSubmit, values, touched,errors }) => (
@@ -153,7 +150,7 @@ export function CreateAccount({navigation}) {
 
                 <View style={styles.existingUser}>
                     <Text style={styles.existingUserText}>Already have a Rebid account?</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('sign-in')}>
+                    <TouchableOpacity onPress={() => navigation.navigate('signin')}>
                         <Text style={[styles.existingUserText,{color:theme.colors.dullRed1}]}>Go to Sign in</Text>
                     </TouchableOpacity>
                 </View>

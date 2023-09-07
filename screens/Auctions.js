@@ -9,7 +9,6 @@ import {
     FlatList,
     StatusBar,
     Platform,
-    ActivityIndicator
 } from 'react-native';
 import { theme } from '../config/theme';
 import { db } from '../config/firebase.config';
@@ -38,8 +37,6 @@ export function Auctions({navigation}) {
         ?
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
-                <Text style={{fontSize:28,color:theme.colors.navy}}>All auctions</Text>
-
                 <View style={{marginTop:16}}>
                     <FlatList
                     data={auctions}

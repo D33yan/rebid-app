@@ -7,9 +7,9 @@ import { Profile } from "./Profile";
 import { Auctions } from "./Auctions";
 const Stack = createNativeStackNavigator();
 
-export function StackNavigation() {
+export function StackNavigation({initRoute}) {
     return (
-        <Stack.Navigator initialRouteName="sign-in"
+        <Stack.Navigator initialRouteName={initRoute}
         screenOptions={{ headerShown:false }}>
             <Stack.Screen name="my-home" component={Home}/>
             <Stack.Screen name="starter" component={Starter}/>

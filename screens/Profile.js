@@ -1,4 +1,5 @@
-import { useState,useEffect } from 'react';
+import { useContext,useState } from "react";
+import { AppContext } from "../config/app-context";
 import { 
     View,
     Text,
@@ -9,39 +10,35 @@ import {
     StatusBar,
     Platform,
 } from 'react-native';
-import { TextInput,Button } from 'react-native-paper';
+import { Button } from 'react-native-paper';
 import { theme } from '../config/theme';
 import { db } from '../config/firebase.config';
 import { CommaSepNum } from '../utilities/comma-sep-num';
-import { getDoc,doc,getDocs,collection } from 'firebase/firestore';
+import { getDoc,doc } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faGavel } from '@fortawesome/free-solid-svg-icons';
 import { faCamera } from '@fortawesome/free-solid-svg-icons';
 import { ScreenLoaderIndicator } from '../utilities/screen-loader-indicator';
 
-const userUID = 'MqFcmcotWvRoTtHd1s91lR81yi13';//REMEMBER TO UPDATE AND DELETE
-
-export function Profile({navigation}) {
-    const [user,setUser] = useState(null);
-
-   
+export function Profile() {
+    const { user } = useContext(AppContext);
+    const [userDetails,setUserDetails] = useState(null);
 
     // GET A SINGLE DOCUMENT
     const getUser = async () => {
-        await getDoc(doc(db,'users',userUID))
-        setUser(onSnap.data())
+        
+        const onSnap = await getDoc(doc(db,'users',JSON.parse(user).user_uid));
+        setUserDetails(onSnap.data());
     }
     getUser();//Call function to 
 
-
     return (
-        user !== null
+        userDetails !== null
         ?
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
             <View style={styles.container}>
                     <View style={styles.header}>
-
                         <View style={styles.subheader}>
                             <Text style={styles.bodyTitle}>My Profile</Text>
                             <TouchableOpacity style={{
@@ -55,39 +52,31 @@ export function Profile({navigation}) {
                                 alignItems: 'center',
                                 padding: 3,
                             }}>
-                                <FontAwesomeIcon 
-                                icon={faCamera} style={{zIndex: 3,}}/>
+                                <FontAwesomeIcon icon={faCamera} style={{zIndex: 3,}}/>
                             </TouchableOpacity >
                             <Image style={styles.profileImg} source={require('../assets/user.jpg')}
                                 height={80}
                                 width={80}
                                 alt='user photo' />
                             <FontAwesomeIcon style={styles.uploadIcon} icon={faGavel} color={theme.colors.dullRed0} />
-                            <Text style={styles.title}>{user.firstname + ' ' + user.lastname}</Text>
-
+                            <Text style={styles.title}>{userDetails.firstName + ' ' + userDetails.lastName}</Text>
                         </View>
                         {/* </ImageBackground> */}
 
                         <View style={styles.infoRow}>
-
                             <View style={styles.info}>
                                 <Text style={styles.infoTitle}>Earned</Text>
                                 <Text style={styles.infoText}>₦{CommaSepNum(291991)}</Text>
-
                             </View>
                             <View style={styles.info}>
                                 <Text style={styles.infoTitle}>Earned</Text>
                                 <Text style={styles.infoText}>₦{CommaSepNum(291991)}</Text>
-
                             </View>
                             <View style={styles.info}>
                                 <Text style={styles.infoTitle}>Earned</Text>
                                 <Text style={styles.infoText}>₦{CommaSepNum(291991)}</Text>
-
                             </View>
-
                         </View>
-
                     </View>
                     <View style={styles.body}>
                         <View style={styles.bodyContainer}>
@@ -97,17 +86,13 @@ export function Profile({navigation}) {
                                 </View>
                                 <Text style={styles.bodyTitle}>My Products</Text>
                                 <Text style={styles.bodyText}>{CommaSepNum(291)}</Text>
-
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.containerView}>
                                 <View style={styles.logoBG}>
                                     <FontAwesomeIcon style={styles.uploadIcon} icon={faGavel} color={theme.colors.navy} />
-                                    
                                 </View>
                                 <Text style={styles.bodyTitle}>My Bids</Text>
                                 <Text style={styles.bodyText}>{CommaSepNum(291)}</Text>
-
-
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -117,13 +102,12 @@ export function Profile({navigation}) {
                         buttonColor={theme.colors.navy}
                         textColor={theme.colors.dullRed0}
                         style={{ paddingVertical: 8, }}
-                        >Update Profile</Button>
-
+                    >Update Profile</Button>
                 </View>
             </View>    
         </SafeAreaView>
-                        : 
-                        <ScreenLoaderIndicator/>
+        :
+        <ScreenLoaderIndicator/>
     )
 }
 
@@ -141,7 +125,6 @@ const styles = StyleSheet.create({
     },
     uploadIcon: {
 
-
     },
     header: {
 
@@ -156,8 +139,6 @@ const styles = StyleSheet.create({
         height: 200,
         borderBottomWidth: 3,
         borderBottomColor: theme.colors.dullRed1,
-
-
     },
     profileImg: {
         borderRadius: 100,
@@ -168,13 +149,11 @@ const styles = StyleSheet.create({
         marginTop: 130,
         borderWidth: 2,
         borderColor: theme.colors.dullRed1
-
     },
     title: {
         position: 'absolute',
         marginTop: 250,
         fontSize: 30,
-
     },
     infoRow: {
         flexDirection: 'row',
@@ -228,5 +207,4 @@ const styles = StyleSheet.create({
         fontSize: 50,
         margin: '10%'
     }
-
 })

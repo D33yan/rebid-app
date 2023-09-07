@@ -1,57 +1,51 @@
-import {createContext,useState, useEffect} from "react";
+import { useState,createContext,useEffect } from "react";
+import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { Alert } from "react-native";
+const AppContext = createContext();
 
-const AppContext = createContext()
+const AppProvider = ({children}) => {
+    const [user,setUser] = useState(null);
+    const [userToken,setUserToken] = useState(null);
+    const [isLoading,setIsLoading] = useState(false); 
 
-function AppProvider({children}){
-    const [UID,setUserUID] = useState('trigger');
-    const [userToken,setUserToken] = useState(null)
-    const [isLoading,setIsLoading] = useState(false);
-
-    const login = () =>{
+    const logout = () => {
         setIsLoading(true);
-        setUserToken('Trigger');
-        AsyncStorage.setItem('userToken',userToken);
-        setIsLoading(false)
+        setUserToken(null);
+        AsyncStorage.removeItem('userToken');
+        AsyncStorage.removeItem('uid');
+        setIsLoading(false);
     }
 
-    const logout = () =>{
-        setIsLoading(true);
-        setUserToken('null');
-        AsyncStorage.removeItem('userToken',userToken);
-        setIsLoading(false)
-    }
-
-    const isLoggedIn = async() =>{
+    const isLoggedIn = async () => {
         try {
-            setIsLoading(true)
-            let userToken = AsyncStorage.getItem('userToken',userToken);
+            setIsLoading(true);
+            let userToken = await AsyncStorage.getItem('userToken');
+            let user = await AsyncStorage.getItem('user');
             setUserToken(userToken);
+            setUser(user);
             setIsLoading(false);
         } catch (error) {
             Alert.alert(
-                'Error Handling',
-                'An error has occured!',
+                'Error handling',
+                'An error has occured! @ context',
                 [{
                     text:'Dismiss',
                     onPress:console.error(error)
                 }]
-            )  
+            )
         }
     }
 
-    useEffect(()=>{
-        isLoggedIn()
-    })
+    useEffect(() => {
+        isLoggedIn();
+    },[])
 
     return (
-        <AppContext.Provider value={{UID,userToken,isLoading,login,logout}}>
+        <AppContext.Provider value={{user,setUser,userToken,setUserToken,isLoading,setIsLoading,logout}}>
             {children}
         </AppContext.Provider>
     )
-
-    
 }
-export {AppContext,AppProvider}
+
+export { AppContext,AppProvider }

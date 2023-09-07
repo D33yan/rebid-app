@@ -33,3 +33,8 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+#my-ignores
+
+*.config.js
+*.config.ts
