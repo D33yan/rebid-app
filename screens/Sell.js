@@ -19,7 +19,7 @@ import { addDoc,collection } from 'firebase/firestore';
 import { categories } from '../assets/categories';
 
 const schema = yup.object().shape({
-    title:yup.string().min(16).max(60).required(),
+    title:yup.string().min(8).max(60).required(),
     description:yup.string().min(16).max(1200).required(),
     initialPrice:yup.number().min(10).required(),
     initialPrice:yup.number().min(1).required(),
@@ -162,7 +162,7 @@ export function Sell({navigation}) {
                                 value={values.endDate}
                                 onChangeText={handleChange('endDate')}
                                 onBlur={handleBlur('endDate')}
-                                placeholder='eg 29/08/2023'/>
+                                placeholder='eg MM/DD/YYYY'/>
                                 {errors.endDate && touched.endDate 
                                 ? <Text style={styles.errorText}>{errors.endDate}</Text> 
                                 : null}

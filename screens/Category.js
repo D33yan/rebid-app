@@ -12,17 +12,18 @@ import {
 } from 'react-native';
 import { theme } from '../config/theme';
 import { db } from '../config/firebase.config';
-import { getDocs,collection } from 'firebase/firestore';
+import { getDocs,collection,query,where,orderBy } from 'firebase/firestore';
 import { CommaSepNum } from '../utilities/comma-sep-num';
 import { ScreenLoaderIndicator } from '../utilities/screen-loader-indicator';
 import { getRemainingTime } from '../utilities/time-remaining';
 
-export function Auctions({navigation}) {
+export function Category({navigation,route}) {
     const [auctions,setAuctions] = React.useState([]);
-    
+    const {category} = route.params;
 
     const getAuctions = async () => {
-        const onSnap = await getDocs(collection(db,'auctions'))
+        const q = query(collection(db,'auctions'),where('category','==',category))
+        const onSnap = await getDocs()
         setAuctions(onSnap.docs.map(doc => {
             return {
                 id:doc.id,
@@ -35,18 +36,21 @@ export function Auctions({navigation}) {
     getAuctions();
 
     return (
-        auctions.length > 0 
-        ?
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
+                <Text style={{fontSize:24}}>Auctions from {category} category</Text>
+
                 <View style={{marginTop:16}}>
-                    <FlatList
-                    data={auctions}
-                    renderItem={({item}) => (
-                        <TouchableOpacity 
-                        style={[
-                            styles.expItem,
-                            {backgroundColor:theme.colors.navy,marginBottom:8,}
+                    {
+                        auctions.length > 1
+                        ?
+                       <FlatList
+                        data={auctions}
+                        renderItem={({item}) => (
+                            <TouchableOpacity 
+                            style={[
+                                styles.expItem,
+                                {backgroundColor:theme.colors.navy,marginBottom:8,}
                             ]}>
                             <Image
                             style={styles.productImg}
@@ -61,11 +65,14 @@ export function Auctions({navigation}) {
                     horizontal={false}
                     showsHorizontalScrollIndicator={false}
                     key={({item}) => item.id}/>
+                    : setTimeout(() => {
+                        return <Text>This category is empty please create an auction</Text> 
+                    }, 4000)
+                }
                 </View>
             </View>    
         </SafeAreaView>
-        :
-        <ScreenLoaderIndicator/>
+
     )
 }
 

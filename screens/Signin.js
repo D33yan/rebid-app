@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext,useEffect } from 'react';
 import { AppContext } from '../config/app-context';
 import { 
     View,
@@ -14,6 +14,11 @@ import { TextInput,Button } from 'react-native-paper';
 import { Formik } from 'formik';
 import { theme } from '../config/theme';
 import * as yup from 'yup';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authentication } from '../config/firebase.config';
+import { signInWithEmailAndPassword,onAuthStateChanged } from 'firebase/auth';
+import { ScreenLoaderIndicator } from '../utilities/screen-loader-indicator';
+import { generateAlphaNumChars } from '../utilities/generate-alpha-num-chars';
 
 const schema = yup.object().shape({
     email:yup.string().min(8).max(60).required(),
@@ -21,10 +26,52 @@ const schema = yup.object().shape({
 });
 
 export function Signin({navigation}) {
-    const {login} = useContext(AppContext)
+    const { isLoading,setIsLoading,userToken,setUserToken,setUser,user } = useContext(AppContext);
 
+    // AUTHORIZATION
+    const checkUserToken = async () => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            token ? navigation.navigate('my-home') : null;
+        } catch (error) {
+            Alert.alert('Error','problem fetching authorization token');
+            console.error(error);
+        }
+    }
+
+    useEffect(() => {
+        checkUserToken();
+    },[userToken]);
+    //AUTHORIZATION
+
+    const login = async (email,pass) => {
+        setIsLoading(true);
+
+        await signInWithEmailAndPassword(authentication,email,pass)
+        .then(() => {
+            onAuthStateChanged(authentication, async (user) => {
+                let token_ = generateAlphaNumChars(36);
+                let dataForStorage = {
+                    token:token_,
+                    user_uid:user.uid
+                }
+
+                setUser(user.uid);
+                setUserToken(token_);
+                await AsyncStorage.setItem('userToken',JSON.stringify(token_));
+                await AsyncStorage.setItem('user',JSON.stringify(dataForStorage));
+
+                setIsLoading(false);
+            })
+        })
+        .catch(e => console.error(e))
+    }
 
     return (
+        isLoading 
+        ?
+        <ScreenLoaderIndicator/>
+        :
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
                 <Text style={styles.brandName}>Rebid</Text>
@@ -33,7 +80,7 @@ export function Signin({navigation}) {
                     <Formik
                         initialValues={{ email:'',password:''}}
                         onSubmit={values => {
-                            login(values.email,values.password)
+                           login(values.email,values.password)
                         }}
                         validationSchema={schema}
                     >

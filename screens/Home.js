@@ -1,4 +1,4 @@
-import { useContext,useEffect,useState } from "react";
+import { useContext,useEffect, useState } from "react";
 import { AppContext } from "../config/app-context";
 import { 
     View,
@@ -24,36 +24,50 @@ import { Profile } from './Profile';
 import { MyBids } from './MyBids';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {getDocs,collection,orderBy,query} from 'firebase/firestore';
+import { getDocs,collection,orderBy,query } from "firebase/firestore";
+import { db } from "../config/firebase.config";
 import { ScreenLoaderIndicator } from "../utilities/screen-loader-indicator";
+import { faSignOut } from "@fortawesome/free-solid-svg-icons";
+import { getRemainingTime } from "../utilities/time-remaining";
+import { AuctionSelect  } from "./AuctionsSelect";
 
 const Tab = createBottomTabNavigator();
 
 function MyHome({navigation}) {
     const { userToken,logout } = useContext(AppContext);
     const [auctions,setAuctions] = useState([]);
-
-
+    const [expiringSoon,setExpiringSoon] = useState([]);
+    
     const getAuctions = async () => {
-
-        const q = query(collection(db,'auctions'),orderBy('createAt','desc'));
-        const onSnap =await getDocs(q);
-        setAuctions(onSnap.docs.map(doc =>{
-            return{
+        const q = query(collection(db,'auctions'),orderBy('createdAt','desc'));
+        const onSnap = await getDocs(q);
+        setAuctions(onSnap.docs.map(doc => {
+            return {
                 id:doc.id,
                 data:{
-                    ...doc.data
+                    ...doc.data()
                 }
             }
         }))
     }
     getAuctions();
 
+    // sort existing auctions by endDate
+    useEffect(() => {
+            const sortedAuctions = auctions.sort((a,b) => {
+            const previousDate = new Date(a.data.endDate).getTime();
+            const currentDate = new Date(b.data.endDate).getTime();
+    
+            return currentDate - previousDate
+        });
+        setExpiringSoon(sortedAuctions);
+    },[])
+
     // AUTHORIZATION
     const checkUserToken = async () => {
         try {
             const token = await AsyncStorage.getItem('userToken');
-            !token ? navigation.navigate('sign-in') : null;
+            !token ? navigation.navigate('signin') : null;
         } catch (error) {
             Alert.alert('Error','problem fetching authorization token @ home');
         }
@@ -65,15 +79,15 @@ function MyHome({navigation}) {
     //AUTHORIZATION
 
     return (
-        // auctions.length < 1
-        // ?
-        // <ScreenLoaderIndicator/>
-        // :
+        auctions.length < 0
+        ?
+        <ScreenLoaderIndicator/>
+        :
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={logout}>
-                        <Text>Try logout</Text>
+                        <FontAwesomeIcon icon={faSignOut} color={theme.colors.navy} size={30}/>
                     </TouchableOpacity>
                     <Text style={styles.brandName}>Rebid</Text>
                 </View>
@@ -84,7 +98,9 @@ function MyHome({navigation}) {
                         <TouchableOpacity 
                         style={styles.catOption} 
                         key={cat.id}
-                        onPress={() => navigation.navigate('auctions')}>
+                        onPress={() => navigation.navigate('category',{
+                            category:cat.title  
+                        })}>
                             <FontAwesomeIcon 
                             icon={cat.icon} 
                             size={40}
@@ -101,7 +117,7 @@ function MyHome({navigation}) {
                     
                     <View>
                         <FlatList
-                        data={demoProducts}
+                        data={expiringSoon}
                         renderItem={({item}) => (
                             <TouchableOpacity 
                             style={[
@@ -110,11 +126,11 @@ function MyHome({navigation}) {
                                 ]}>
                                 <Image
                                 style={styles.productImg}
-                                source={{uri:item.imageUr}}/>
+                                source={{uri:item.data.photoUrl}}/>
                                 <View style={styles.expItemsDetailsBlk}>
-                                    <Text style={{fontSize:12}}>Ending in 1d 5hrs 32min 44secs</Text>
-                                    <Text style={{fontSize:16}}>{item.title.length > 24 ? item.title.slice(0,24)+'...' : item.title}</Text>
-                                    <Text style={{fontSize:20,fontWeight:'600'}}>₦{CommaSepNum(item.currentBid)}</Text>
+                                    <Text style={{fontSize:12}}>{getRemainingTime(new Date(item.data.endDate).getTime())}</Text>
+                                    <Text style={{fontSize:16}}>{item.data.title.length > 24 ? item.data.title.slice(0,24)+'...' : item.data.title}</Text>
+                                    <Text style={{fontSize:20,fontWeight:'600'}}>₦{CommaSepNum(item.data.initialPrice)}</Text>
                                 </View>
                             </TouchableOpacity>
                         )}
@@ -131,28 +147,40 @@ function MyHome({navigation}) {
                             <Text style={[styles.expSoonText,{color:theme.colors.dullRed1}]}>all auctions</Text>
                         </TouchableOpacity>
                     </View>
+                    
                     {/* recent auctions */}
                     <View>
                         <FlatList
                         data={auctions}
-                        renderItem={({item}) => (
+                        renderItem={({item}) => {
+                            
+
+                            return (
                             <TouchableOpacity 
                             style={[
                                 styles.expItem,
                                 {backgroundColor:theme.colors.navy,marginBottom:8,}
-                                ]}>
+                                ]} 
+                                onPress={()=>navigation.navigate('auctionselect')}>
                                 <Image
                                 style={styles.productImg}
                                 source={{uri:item.data.photoUrl}}/>
                                 <View style={styles.expItemsDetailsBlk}>
-                                    <Text style={{fontSize:12,color:theme.colors.dullRed0}}>Ending in 1d 5hrs 32min 44secs</Text>
-                                    <Text style={{fontSize:16,color:theme.colors.dullRed1}}>{item.data.title.length > 24 ? item.data.title.slice(0,24)+'...' : item.title}</Text>
-                                    <Text style={{fontSize:20,fontWeight:'600',color:theme.colors.dullRed1}}>₦{CommaSepNum(item.currentBid)}</Text>
-                                    <Text style={{fontSize:20,fontWeight:'600',color:theme.colors.dullRed1}}>₦{CommaSepNum(item.data.initialPrice)}</Text>
-                                    <Text style={{fontSize:20,fontWeight:'600',color:theme.colors.dullRed1}}>₦{CommaSepNum(item.data.bidIncrement)}</Text>
+                                    <Text style={{fontSize:12,color:theme.colors.dullRed0}}>
+                                    {getRemainingTime(item.data.endDate)}
+                                    </Text>
+                                    <Text style={{fontSize:16,color:theme.colors.dullRed1}}>
+                                        {item.data.title.length > 30 ? item.data.title.slice(0,30)+'...' : item.title}
+                                    </Text>
+                                    <Text style={{fontSize:20,fontWeight:'600',color:theme.colors.dullRed1}}>
+                                        Initial price: ₦{CommaSepNum(item.data.initialPrice)}
+                                    </Text>
+                                    <Text style={{fontSize:20,fontWeight:'600',color:theme.colors.dullRed1}}>
+                                        Bid increment: ₦{CommaSepNum(item.data.bidIncrement)}
+                                    </Text>
                                 </View>
                             </TouchableOpacity>
-                        )}
+                        )}}
                         horizontal={false}
                         showsHorizontalScrollIndicator={false}
                         key={({item}) => item.id}/>
@@ -176,7 +204,7 @@ export function Home() {
                 iconName = focused ? 'ios-cart-sharp' : 'ios-cart-outline';
               } else if (route.name === 'Bids') {
                 iconName = focused ? 'hammer' : 'hammer-outline';
-              } else if (route.name === 'History') {
+              } else if (route.name === 'AuctionSelect') {
                 iconName = focused ? 'md-file-tray-stacked' : 'ios-file-tray-stacked-outline';
               } else if (route.name === 'Profile') {
                 iconName = focused ? 'person-circle' : 'person-circle-outline';
@@ -191,7 +219,7 @@ export function Home() {
             <Tab.Screen name='Home' component={MyHome} options={{headerShown:false}} />
             <Tab.Screen name='Sell' component={Sell} options={{headerShown:false}} />
             <Tab.Screen name='Bids' component={MyBids} options={{headerShown:false}}/>
-            <Tab.Screen name='History' component={History} options={{headerShown:false}}/>
+            <Tab.Screen name='AuctionSelect' component={AuctionSelect} options={{headerShown:false}}/>
             <Tab.Screen name='Profile' component={Profile} options={{headerShown:false}}/>
         </Tab.Navigator>
     )

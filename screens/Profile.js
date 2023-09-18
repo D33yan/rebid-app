@@ -20,13 +20,12 @@ import { faGavel } from '@fortawesome/free-solid-svg-icons';
 import { faCamera } from '@fortawesome/free-solid-svg-icons';
 import { ScreenLoaderIndicator } from '../utilities/screen-loader-indicator';
 
-export function Profile() {
+export function Profile({navigation}) {
     const { user } = useContext(AppContext);
     const [userDetails,setUserDetails] = useState(null);
 
     // GET A SINGLE DOCUMENT
     const getUser = async () => {
-        
         const onSnap = await getDoc(doc(db,'users',JSON.parse(user).user_uid));
         setUserDetails(onSnap.data());
     }
@@ -80,7 +79,9 @@ export function Profile() {
                     </View>
                     <View style={styles.body}>
                         <View style={styles.bodyContainer}>
-                            <TouchableOpacity style={styles.containerView}>
+                            <TouchableOpacity 
+                            style={styles.containerView}
+                            onPress={() => navigation.navigate('myauctions')}>
                                 <View style={styles.logoBG}>
                                     <FontAwesomeIcon style={styles.uploadIcon} icon={faGavel} color={theme.colors.navy} />
                                 </View>
