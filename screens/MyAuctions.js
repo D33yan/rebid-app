@@ -43,7 +43,8 @@ export function MyAuctions() {
                                 <FontAwesomeIcon
                                 icon={faPen}
                                 size={24}
-                                color={theme.colors.navy}/>
+                                color={theme.colors.navy}
+                                />
                             </TouchableOpacity>
                         </View>
                     <View  style={styles.auctionDetails}>
@@ -51,7 +52,7 @@ export function MyAuctions() {
                         style={styles.productImg}
                         source={{uri:item.data.photoUrl}}/>
                         <View>
-                        <Text style={{fontSize:12,color:theme.colors.dullRed0}}>{getRemainingTime(item.data.endDate)}</Text>
+                        <Text style={{fontSize:14,color:theme.colors.navy}}>{getRemainingTime(item.data.endDate)}</Text>
                             <Text style={{fontSize:16,color:theme.colors.dullRed1}}>{item.data.title.length > 24 ? item.data.title.slice(0,24)+'...' : item.data.title}</Text>
                             <Text style={{fontSize:20,fontWeight:'600',color:theme.colors.dullRed1}}>₦{CommaSepNum(item.data.initialPrice)}</Text>
 
@@ -80,6 +81,7 @@ const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
         marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    
     },
     container: {
         flex: 1,
