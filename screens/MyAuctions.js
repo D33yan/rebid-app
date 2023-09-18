@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState,useContext } from "react";
 import { View,StyleSheet,TouchableOpacity,Text,StatusBar,Platform,SafeAreaView,FlatList,Image} from "react-native";
 import { db } from "../config/firebase.config";
 import { getDocs,collection,query,where,orderBy } from "firebase/firestore";
@@ -8,21 +8,14 @@ import { faTrash,faPen } from "@fortawesome/free-solid-svg-icons";
 import { theme } from "../config/theme";
 import { CommaSepNum } from "../utilities/comma-sep-num";
 import { getRemainingTime } from "../utilities/time-remaining";
+import { AppContext } from "../config/app-context";
 
 export function MyAuctions() {
     const [myAuctions,setMyAuctions] = useState([]);
-    const [UID,setUID] = useState(null);
-
-    const getMyUID = async () => {
-        const user = await AsyncStorage.getItem('user');
-        let uid = JSON.parse(user);
-
-        setUID(uid.user_uid)
-    }
-    getMyUID()
+    const {user} = useContext(AppContext)
 
     const getMyAuctions = async () => {
-        const q = query(collection(db,'auctions'),where('createdBy','==',UID));
+        const q = query(collection(db,'auctions'),where('createdBy','==',JSON.parse(user).user_uid));
         const onSnap = await getDocs(q);
         setMyAuctions(onSnap.docs.map(doc => {
             return {
@@ -45,11 +38,15 @@ export function MyAuctions() {
                    data={myAuctions}
                    renderItem={({item}) => (
                     <View style={styles.auctionItem}>
-                    <FontAwesomeIcon
-                    icon={faPen}
-                    size={24}
-                    />
-                    <View  style={styles.Details}>
+                        <View style={styles.auctionSection}>
+                            <TouchableOpacity style={styles.actionCircle}>
+                                <FontAwesomeIcon
+                                icon={faPen}
+                                size={24}
+                                color={theme.colors.navy}/>
+                            </TouchableOpacity>
+                        </View>
+                    <View  style={styles.auctionDetails}>
                         <Image
                         style={styles.productImg}
                         source={{uri:item.data.photoUrl}}/>
@@ -60,9 +57,14 @@ export function MyAuctions() {
 
                         </View>
                     </View>
-                    <FontAwesomeIcon
-                    icon={faTrash}
-                    size={24}/>
+                    <View style={styles.auctionSection}>
+                            <TouchableOpacity style={styles.actionCircle}>
+                                <FontAwesomeIcon
+                                icon={faTrash}
+                                size={24}
+                                color={theme.colors.navy}/>
+                            </TouchableOpacity>
+                        </View>
                 </View> 
                    )}
                    key={({item}) => item.id}>
@@ -87,18 +89,19 @@ const styles = StyleSheet.create({
         fontSize:22
     },
     auctionItem:{
+        flex:1,
         backgroundColor:'white',
         borderRadius:8,
         flexDirection:"row",
         alignItems:"center",
-        justifyContent:"space-between",
-        gap:2,
         padding:6,
         marginBottom:6,
 
     },
-    myAuctionsBlock:{
-        
+    auctionSection:{
+        flex:1,
+        justifyContent:"center",
+        alignItems:"center",
     },
     auctionDetails:{
         flexDirection:"column",
@@ -113,5 +116,15 @@ const styles = StyleSheet.create({
         height:100,
         borderRadius:8,
     },
+    actionCircle:{
+        width:52,
+        height:52,
+        borderRadius:10,
+        backgroundColor:theme.colors.dullRed0,
+        justifyContent:"center",
+        alignItems:"center",
+        borderRadius:50,
+    },
+
 
 })

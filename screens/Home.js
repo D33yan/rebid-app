@@ -22,6 +22,7 @@ import { Sell } from './Sell';
 import { History } from './History';
 import { Profile } from './Profile';
 import { MyBids } from './MyBids';
+import { MyAuctions } from "./MyAuctions";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getDocs,collection,orderBy,query } from "firebase/firestore";
@@ -204,7 +205,7 @@ export function Home() {
                 iconName = focused ? 'ios-cart-sharp' : 'ios-cart-outline';
               } else if (route.name === 'Bids') {
                 iconName = focused ? 'hammer' : 'hammer-outline';
-              } else if (route.name === 'AuctionSelect') {
+              } else if (route.name === 'my auctions') {
                 iconName = focused ? 'md-file-tray-stacked' : 'ios-file-tray-stacked-outline';
               } else if (route.name === 'Profile') {
                 iconName = focused ? 'person-circle' : 'person-circle-outline';
@@ -219,7 +220,7 @@ export function Home() {
             <Tab.Screen name='Home' component={MyHome} options={{headerShown:false}} />
             <Tab.Screen name='Sell' component={Sell} options={{headerShown:false}} />
             <Tab.Screen name='Bids' component={MyBids} options={{headerShown:false}}/>
-            <Tab.Screen name='AuctionSelect' component={AuctionSelect} options={{headerShown:false}}/>
+            <Tab.Screen name='my auctions' component={MyAuctions} options={{headerShown:false}}/>
             <Tab.Screen name='Profile' component={Profile} options={{headerShown:false}}/>
         </Tab.Navigator>
     )

@@ -32,7 +32,7 @@ export function AuctionSelect({navigation}) {
         }))
     }
     getAuctions();
-    const [orderButton,setOrderButton] = useState()
+    const [orderButton,setOrderButton] = useState(1)
     
     
     return (    
