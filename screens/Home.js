@@ -32,6 +32,7 @@ import { faSignOut } from "@fortawesome/free-solid-svg-icons";
 import { getRemainingTime } from "../utilities/time-remaining";
 import { AuctionSelect  } from "./AuctionsSelect";
 
+
 const Tab = createBottomTabNavigator();
 
 function MyHome({navigation}) {
@@ -53,12 +54,12 @@ function MyHome({navigation}) {
     }
     getAuctions();
 
+
     // sort existing auctions by endDate
     useEffect(() => {
             const sortedAuctions = auctions.sort((a,b) => {
             const previousDate = new Date(a.data.endDate).getTime();
             const currentDate = new Date(b.data.endDate).getTime();
-    
             return currentDate - previousDate
         });
         setExpiringSoon(sortedAuctions);
@@ -80,6 +81,7 @@ function MyHome({navigation}) {
     //AUTHORIZATION
 
     return (
+        
         auctions.length < 0
         ?
         <ScreenLoaderIndicator/>
@@ -120,6 +122,7 @@ function MyHome({navigation}) {
                         <FlatList
                         data={expiringSoon}
                         renderItem={({item}) => (
+                            
                             <TouchableOpacity 
                             style={[
                                 styles.expItem,
@@ -162,7 +165,14 @@ function MyHome({navigation}) {
                                 styles.expItem,
                                 {backgroundColor:theme.colors.navy,marginBottom:8,}
                                 ]} 
-                                onPress={()=>navigation.navigate('auctionselect')}>
+                                onPress={()=>navigation.navigate('auctionselect',{
+                                    itemId:item.id,
+                                    itemTitle:item.data.title,
+                                    itemPhoto:item.data.photoUrl,
+                                    itemPrice:item.data.initialPrice,
+                                    itemBidIncrement:item.data.endDate,   
+                                    itemDesc:item.data.description,   
+                                })}>
                                 <Image
                                 style={styles.productImg}
                                 source={{uri:item.data.photoUrl}}/>

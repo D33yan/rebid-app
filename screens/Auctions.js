@@ -17,6 +17,7 @@ import { CommaSepNum } from '../utilities/comma-sep-num';
 import { ScreenLoaderIndicator } from '../utilities/screen-loader-indicator';
 import { getRemainingTime } from '../utilities/time-remaining';
 
+
 export function Auctions({navigation}) {
     const [auctions,setAuctions] = React.useState([]);
     

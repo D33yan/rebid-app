@@ -14,69 +14,94 @@ import { TextInput,Button,IconButton } from 'react-native-paper';
 import { theme } from '../config/theme';
 import { authentication } from '../config/firebase.config';
 import { db } from '../config/firebase.config';
-import { getDocs,collection } from 'firebase/firestore';
+import { getDocs,collection,query,where,orderBy } from 'firebase/firestore';
 import {useState} from 'react'; 
+import { CommaSepNum } from '../utilities/comma-sep-num';
+import { getRemainingTime } from '../utilities/time-remaining';
 
 
-export function AuctionSelect({navigation}) {
+export function AuctionSelect({route}) {
+    const { itemId,
+        itemTitle,
+        itemPhoto,
+        itemPrice,
+        itemBidIncrement,
+        itemEndDate,
+        itemDesc,
+} = route.params;
+    const [myAuctions,setMyAuctions] = useState([]);
+    const [bidPrice, setBidPrice] = useState(itemPrice);
+    const [bidCount, setBidCount] = useState(itemPrice)
 
-    const getAuctions = async () => {
-        const onSnap = await getDocs(collection(db,'auctions'))
-        setAuctions(onSnap.docs.map(doc => {
-            return {
-                id:doc.id,
-                data:{
-                    ...doc.data()
-                }
-            }
-        }))
+    function incrementBtn() {
+        setBidPrice(bidPrice + itemBidIncrement);
+        setBidCount(bidCount + itemBidIncrement);
+        
     }
-    getAuctions();
-    const [orderButton,setOrderButton] = useState(1)
+    function decrementBtn() {
+        setBidPrice(bidPrice - itemBidIncrement);
+        setBidCount(bidCount - itemBidIncrement);
+
+    }
+    
     
     
     return (    
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
                 <View style={styles.photoUrl}>
-                    <Image source={require('../assets/auction.jpg')}
-                    style={styles.bg}>
-                    </Image>
+                    <Image source={{uri:itemPhoto}}
+                    style={styles.bg}/>
+                    <Text>{itemTitle}</Text>
+                            {/* <Text style={styles.auctionCategory}>Category</Text> */}
+                            <Text style={styles.itemPrice}>₦{CommaSepNum(itemPrice)} </Text>
+                            <Text  style={styles.itemEndDate}>{getRemainingTime(new Date(itemEndDate).getTime())}</Text>
+                   
                 </View>
                 <Text style={styles.desc}>
-                    hello people of nigeria 
+                   {itemDesc}
                 </Text>
                 <View style={styles.orderSection}>
-                    <TextInput style={styles.orderText}
-                    >
-                        
-                    </TextInput>
+                    <Text style={styles.orderText}>
+                      {bidCount}  
+                    </Text>
                     <View style={styles.buttonControls}>
                         <IconButton
                         icon='minus-thick'
                         mode='contained'
                         size={20}
                         style={styles.incrementbtn}
-                        
+                        onPress={decrementBtn}
                         />
-                        <TextInput 
+                        <Text
                     style={styles.buttonText} >
+                        {bidCount}
+                    </Text>
 
-                        </TextInput>
                         <IconButton
                         icon='plus-thick'
                         mode='contained'
                         size={20}
                         color='black'
                         style={styles.incrementbtn}
-                        
-                            
+                        onPress={incrementBtn}   
                         />
                     </View>
                 </View>
                     <View style={styles.cartsection}>
-                        <TouchableOpacity>
-
+                        <TouchableOpacity style={styles.heartIcon}>
+                            <IconButton
+                            icon='heart'/>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity style={styles.cartBtn} >
+                            <Text style={styles.cartText}>
+                                Add to Cart
+                            </Text>
+                            <IconButton
+                            icon='cart'
+                            style={styles.cartIcon}
+                            />
                         </TouchableOpacity>
                     </View>
             </View>    
@@ -96,8 +121,7 @@ const styles = StyleSheet.create({
         gap:16,
     },
     photoUrl:{
-        flex:4,
-        marginTop:40,
+        flex:3, 
         marginLeft:10,
         marginRight:10,
         
@@ -111,12 +135,13 @@ const styles = StyleSheet.create({
     },
     desc:{
        flex:1.5,
-       backgroundColor:theme.colors.dullRed0,
+       fontSize:30,
+       
     },
     
     
     orderSection:{
-     flex:0.2,
+     flex:0.25,
      marginBottom:50,
     },
     orderText:{
@@ -124,26 +149,30 @@ const styles = StyleSheet.create({
         opacity:0.5,
         position:'relative',
         top:50,
+        left:20,
         width:100,
-        backgroundColor:'white',
+        height:40, 
+        color:"black",
     },
     buttonControls:{
         flexDirection:'row',
-        width:140,
+        width:150,
         height:50,
-        padding:2,
+        padding:5,
         backgroundColor:theme.colors.navy, 
         borderRadius:10,
         position:'relative',
         left:200,  
     },
     buttonText:{
-        width:40,
+        width:50,
         height:40,
         margin:3,
         borderRadius:10,
         backgroundColor:theme.colors.navy,
         color:'white',
+        textAlign:'center',
+        
         
     },
     incrementbtn:{
@@ -155,11 +184,52 @@ const styles = StyleSheet.create({
         margin:2,
     },
     cartsection:{
-        flex:0.3,
-        backgroundColor:theme.colors.dullRed1,
+        flex:0.5,
         marginBottom:10,
         marginTop:30,
+        
     },
-
+    heartIcon:{
+        width:40,
+        height:40,
+        borderRadius:50,
+        backgroundColor:theme.colors.dullRed0,
+        color:'black',
+        alignItems:'center',
+        justifyContent:'center',
+        color:theme.colors.navy,
+        position:'relative',
+        left:20,
+    },
+    cartBtn:{
+       height:50,
+        width:270,
+        borderRadius:10,
+        backgroundColor:theme.colors.navy,
+        color:'black',
+        position:'relative',
+       bottom:40,
+        left:80,
+        
+    },
+    cartIcon:{
+        width:30,
+        height:30,
+        borderRadius:50,
+        backgroundColor:theme.colors.dullRed0,
+        color:'black',
+        alignItems:'center',
+        justifyContent:'center',
+        color:theme.colors.navy,
+        position:'relative',
+        left:170,
+        bottom:35,
+    },
+    cartText:{
+        fontSize:18,
+        color:'white',
+        marginLeft:50,
+        marginTop:10,
+    }
     
 })

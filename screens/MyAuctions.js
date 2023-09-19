@@ -1,7 +1,7 @@
 import { useState,useContext } from "react";
 import { View,StyleSheet,TouchableOpacity,Text,StatusBar,Platform,SafeAreaView,FlatList,Image} from "react-native";
 import { db } from "../config/firebase.config";
-import { getDocs,collection,query,where,orderBy } from "firebase/firestore";
+import { getDocs,collection,query,where,orderBy, deleteDoc } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faTrash,faPen } from "@fortawesome/free-solid-svg-icons";
@@ -27,6 +27,11 @@ export function MyAuctions() {
         }))
     }
     getMyAuctions()
+
+    const deleteAuction = async()=>{
+        const data = doc(collection(db,'auctions',item.id));
+        await deleteDoc(data);
+    }
 
     return (
         <SafeAreaView style={styles.wrapper}>
@@ -59,11 +64,13 @@ export function MyAuctions() {
                         </View>
                     </View>
                     <View style={styles.auctionSection}>
-                            <TouchableOpacity style={styles.actionCircle}>
+                            <TouchableOpacity style={styles.actionCircle}
+                            onPress={deleteAuction}>
                                 <FontAwesomeIcon
                                 icon={faTrash}
                                 size={24}
-                                color={theme.colors.navy}/>
+                                color={theme.colors.navy}
+                                />
                             </TouchableOpacity>
                         </View>
                 </View> 
