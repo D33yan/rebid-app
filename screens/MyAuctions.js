@@ -1,4 +1,4 @@
-import { useState,useContext } from "react";
+import { useState,useContext,useEffect } from "react";
 import { View,StyleSheet,TouchableOpacity,Text,StatusBar,Platform,SafeAreaView,FlatList,Image} from "react-native";
 import { db } from "../config/firebase.config";
 import { getDocs,collection,query,where,orderBy, deleteDoc } from "firebase/firestore";
@@ -26,7 +26,9 @@ export function MyAuctions() {
             }
         }))
     }
-    getMyAuctions()
+    useEffect(() =>{
+        getMyAuctions();
+    },[])
 
     const deleteAuction = async()=>{
         const data = doc(collection(db,'auctions',item.id));
@@ -41,6 +43,7 @@ export function MyAuctions() {
                 <View style={styles.myAuctionsBlock}>
                    <FlatList
                    data={myAuctions}
+                   initialNumToRender={10}
                    renderItem={({item}) => (
                     <View style={styles.auctionItem}>
                         <View style={styles.auctionSection}>

@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     },
     desc:{
        flex:1.5,
-       fontSize:30,
+       fontSize:20,
        
     },
     

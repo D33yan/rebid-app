@@ -33,7 +33,9 @@ export function Auctions({navigation}) {
             }
         }))
     }
-    getAuctions();
+    React.useEffect(() =>{
+        getAuctions();
+    },[])
 
     return (
         auctions.length > 0 
@@ -43,6 +45,7 @@ export function Auctions({navigation}) {
                 <View style={{marginTop:16}}>
                     <FlatList
                     data={auctions}
+                    initialNumToRender={10}
                     renderItem={({item}) => (
                         <TouchableOpacity 
                         style={[
