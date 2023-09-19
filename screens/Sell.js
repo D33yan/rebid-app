@@ -1,5 +1,6 @@
 import { useState, useContext } from 'react';
 import { AppContext } from '../config/app-context';
+import { ScreenLoaderIndicatorOpacity } from '../utilities/screen-loader-indicator-with-opacity';
 import {
     View,
     Text,
@@ -30,6 +31,7 @@ const schema = yup.object().shape({
 export function Sell({ navigation }) {
     const { user } = useContext(AppContext);
     const [categorySelected, setCategorySelected] = useState(null);
+    const [showLoader,setShowLoader] = useState(false)
 
     const handleCreateAuction = async (
         title,
@@ -49,13 +51,17 @@ export function Sell({ navigation }) {
             endDate: endDate,
             createdAt: new Date().getTime(),
         })
-            .then(() => Alert.alert(
-                'Info',
-                'Your auction was created',
-                [{
-                    text: 'Dismiss',
-                }]
-            ))
+            .then(() => {
+                setShowLoader(false)
+                Alert.alert(
+                    'Info',
+                    'Your auction was created',
+                    [{
+                        text: 'Dismiss',
+                    }]
+                    )
+            })
+            
             .catch((e) => Alert.alert(
                 'Info',
                 'An error has occured!',
@@ -67,6 +73,8 @@ export function Sell({ navigation }) {
     }
 
     return (
+        <>
+        <ScreenLoaderIndicatorOpacity controlState={showLoader}/>
         <SafeAreaView style={styles.wrapper}>
             <View style={styles.container}>
 
@@ -215,6 +223,7 @@ export function Sell({ navigation }) {
                 </View>
             </View>
         </SafeAreaView>
+        </>
     )
 }
 

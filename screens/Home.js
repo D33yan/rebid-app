@@ -52,7 +52,9 @@ function MyHome({navigation}) {
             }
         }))
     }
-    getAuctions();
+    useEffect(() =>{
+        getAuctions();
+    },[])
 
 
     // sort existing auctions by endDate
@@ -74,6 +76,7 @@ function MyHome({navigation}) {
             Alert.alert('Error','problem fetching authorization token @ home');
         }
     }
+    
 
     useEffect(() => {
         checkUserToken();
@@ -121,6 +124,7 @@ function MyHome({navigation}) {
                     <View>
                         <FlatList
                         data={expiringSoon}
+                        initialNumToRender={3}
                         renderItem={({item}) => (
                             
                             <TouchableOpacity 
@@ -156,6 +160,7 @@ function MyHome({navigation}) {
                     <View>
                         <FlatList
                         data={auctions}
+                        initialNumToRender={3}
                         renderItem={({item}) => {
                             
 
