@@ -9,13 +9,13 @@ export function AppNav (){
     const {userToken,isLoading} = useContext(AppContext);
 
     if(isLoading){
-        <ScreenLoaderIndicator/>
+        return <ScreenLoaderIndicator/>
     }
 
    
     return(
         <NavigationContainer>
-            {userToken ? <Home/> : <StackNavigation/>}
+            <StackNavigation/>
         </NavigationContainer>
     )
 }

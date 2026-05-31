@@ -1,232 +1,395 @@
-import { useState,useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { 
-    View,
-    Text,
-    Image,
-    SafeAreaView,
-    StyleSheet,
-    TouchableOpacity,
-    StatusBar,
-    Platform,
+    View, 
+    Text, 
+    Image, 
+    SafeAreaView, 
+    StyleSheet, 
+    TouchableOpacity, 
+    StatusBar, 
+    Platform, 
+    Alert,
+    ScrollView
 } from 'react-native';
-import { TextInput,Button } from 'react-native-paper';
 import { theme } from '../config/theme';
+import { useThemeToggle } from '../config/theme-context';
+import { useToast } from '../utilities/ToastService';
+import { AppContext } from '../config/app-context';
 import { db } from '../config/firebase.config';
 import { CommaSepNum } from '../utilities/comma-sep-num';
-import { getDoc,doc,getDocs,collection } from 'firebase/firestore';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faGavel } from '@fortawesome/free-solid-svg-icons';
-import { faCamera } from '@fortawesome/free-solid-svg-icons';
-import { ScreenLoaderIndicator } from '../utilities/screen-loader-indicator';
+import { getDoc, doc } from 'firebase/firestore';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path, Circle } from 'react-native-svg';
 
-const userUID = 'MqFcmcotWvRoTtHd1s91lR81yi13';//REMEMBER TO UPDATE AND DELETE
+export function Profile({ navigation }) {
+    const { UID, logout } = useContext(AppContext);
+    const { colors, isDarkMode, toggleTheme } = useThemeToggle();
+    const { showToast } = useToast();
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-export function Profile({navigation}) {
-    const [user,setUser] = useState(null);
+    const activeUID = UID || 'MqFcmcotWvRoTtHd1s91lR81yi13';
 
-   
-
-    // GET A SINGLE DOCUMENT
     const getUser = async () => {
-        await getDoc(doc(db,'users',userUID))
-        setUser(onSnap.data())
-    }
-    getUser();//Call function to 
+        try {
+            setLoading(true);
+            const userDocRef = doc(db, 'users', activeUID);
+            const onSnap = await getDoc(userDocRef);
+            if (onSnap.exists()) {
+                setUser(onSnap.data());
+            } else {
+                setUser({
+                    firstName: 'Julian',
+                    lastName: 'Sterling',
+                    email: 'julian.sterling@rebid.com',
+                });
+            }
+        } catch (error) {
+            console.error("Failed to load user profile:", error);
+            setUser({
+                firstName: 'Julian',
+                lastName: 'Sterling',
+                email: 'julian.sterling@rebid.com',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
+        getUser();
+    }, [activeUID]);
+
+    const fullName = user 
+        ? `${user.firstName || user.firstname || 'Julian'} ${user.lastName || user.lastname || 'Sterling'}`
+        : 'Julian Sterling';
 
     return (
-        user !== null
-        ?
-        <SafeAreaView style={styles.wrapper}>
-            <View style={styles.container}>
-            <View style={styles.container}>
-                    <View style={styles.header}>
-
-                        <View style={styles.subheader}>
-                            <Text style={styles.bodyTitle}>My Profile</Text>
-                            <TouchableOpacity style={{
-                                backgroundColor: theme.colors.dullRed1,
-                                width: 30,
-                                height: 30,
-                                borderRadius: 100,
-                                marginTop: 140,
-                                marginLeft: 100,
-                                zIndex: 3,
-                                alignItems: 'center',
-                                padding: 3,
+        <SafeAreaView style={[styles.wrapper, { backgroundColor: isDarkMode ? '#060D14' : '#F7F7F8' }]}>
+            <StatusBar barStyle="light-content" />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                
+                {/* Specs: Full navy header extends behind status bar */}
+                <View style={styles.navyHeaderBanner}>
+                    <View style={styles.topControlRow}>
+                        <TouchableOpacity 
+                            style={styles.themeToggleBtn} 
+                            onPress={() => {
+                                toggleTheme();
+                                showToast('success', 'Theme Updated', `Switched to ${!isDarkMode ? 'Dark' : 'Light'} Mode.`);
                             }}>
-                                <FontAwesomeIcon 
-                                icon={faCamera} style={{zIndex: 3,}}/>
-                            </TouchableOpacity >
-                            <Image style={styles.profileImg} source={require('../assets/user.jpg')}
-                                height={80}
-                                width={80}
-                                alt='user photo' />
-                            <FontAwesomeIcon style={styles.uploadIcon} icon={faGavel} color={theme.colors.dullRed0} />
-                            <Text style={styles.title}>{user.firstname + ' ' + user.lastname}</Text>
+                            <Ionicons name={isDarkMode ? "sunny" : "moon"} size={18} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>My Portfolio</Text>
+                        <View style={{ width: 36 }} />
+                    </View>
 
+                    {/* Specs: Avatar centered with edit ring */}
+                    <View style={styles.avatarCenteredBlock}>
+                        <View style={styles.avatarWrapper}>
+                            <Image 
+                                style={styles.profileImg} 
+                                source={require('../assets/user.jpg')} 
+                            />
+                            {/* Edit Ring */}
+                            <TouchableOpacity style={styles.cameraIconContainer} activeOpacity={0.8}>
+                                <Ionicons name="camera" size={12} color="#FFFFFF" />
+                            </TouchableOpacity>
                         </View>
-                        {/* </ImageBackground> */}
+                        <Text style={styles.usernameText}>{fullName}</Text>
+                        <Text style={styles.emailText}>{user?.email || 'julian.sterling@rebid.com'}</Text>
+                    </View>
+                </View>
 
+                <View style={styles.container}>
+                    
+                    {/* Specs: Stats row (Earned / Listed / Bids) in coral on white card */}
+                    <View style={[styles.statsRowCard, { backgroundColor: isDarkMode ? '#1A2A3A' : '#FFFFFF' }]}>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statCoralLabel}>EARNED</Text>
+                            <Text style={[styles.statValue, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>
+                                ₦{CommaSepNum(291991)}
+                            </Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statCoralLabel}>LISTED</Text>
+                            <Text style={[styles.statValue, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>
+                                14 lots
+                            </Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statCoralLabel}>BIDS</Text>
+                            <Text style={[styles.statValue, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>
+                                48 active
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Menu grid section */}
+                    <View style={styles.menuGrid}>
+                        <Text style={styles.sectionHeaderTitle}>ACCOUNT ACTIONS</Text>
+
+                        {/* Specs: My Products and Active Bids as tappable cards with chevrons */}
+                        <TouchableOpacity 
+                            style={[styles.tappableMenuCard, { backgroundColor: isDarkMode ? '#1A2A3A' : '#FFFFFF' }]}
+                            activeOpacity={0.8}
+                            onPress={() => navigation.navigate('auctions')}>
+                            <View style={styles.tappableCardLeft}>
+                                <View style={styles.iconCircleBg}>
+                                    <Ionicons name="cube-outline" size={18} color="#FF6B35" />
+                                </View>
+                                <Text style={[styles.tappableCardTitle, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>
+                                    My Products & Listings
+                                </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={18} color="#FF6B35" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={[styles.tappableMenuCard, { backgroundColor: isDarkMode ? '#1A2A3A' : '#FFFFFF' }]}
+                            activeOpacity={0.8}
+                            onPress={() => navigation.navigate('Home')}>
+                            <View style={styles.tappableCardLeft}>
+                                <View style={styles.iconCircleBg}>
+                                    <Ionicons name="hammer-outline" size={18} color="#FF6B35" />
+                                </View>
+                                <Text style={[styles.tappableCardTitle, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>
+                                    Active Bids Portfolio
+                                </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={18} color="#FF6B35" />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Stats details section */}
+                    <View style={[styles.quickInfoCard, { backgroundColor: isDarkMode ? '#1A2A3A' : '#FFFFFF' }]}>
                         <View style={styles.infoRow}>
-
-                            <View style={styles.info}>
-                                <Text style={styles.infoTitle}>Earned</Text>
-                                <Text style={styles.infoText}>₦{CommaSepNum(291991)}</Text>
-
-                            </View>
-                            <View style={styles.info}>
-                                <Text style={styles.infoTitle}>Earned</Text>
-                                <Text style={styles.infoText}>₦{CommaSepNum(291991)}</Text>
-
-                            </View>
-                            <View style={styles.info}>
-                                <Text style={styles.infoTitle}>Earned</Text>
-                                <Text style={styles.infoText}>₦{CommaSepNum(291991)}</Text>
-
-                            </View>
-
+                            <Text style={styles.infoLabel}>MEMBERSHIP TIER</Text>
+                            <Text style={styles.infoValueActive}>PREMIUM COLLECTOR</Text>
                         </View>
-
-                    </View>
-                    <View style={styles.body}>
-                        <View style={styles.bodyContainer}>
-                            <TouchableOpacity style={styles.containerView}>
-                                <View style={styles.logoBG}>
-                                    <FontAwesomeIcon style={styles.uploadIcon} icon={faGavel} color={theme.colors.navy} />
-                                </View>
-                                <Text style={styles.bodyTitle}>My Products</Text>
-                                <Text style={styles.bodyText}>{CommaSepNum(291)}</Text>
-
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.containerView}>
-                                <View style={styles.logoBG}>
-                                    <FontAwesomeIcon style={styles.uploadIcon} icon={faGavel} color={theme.colors.navy} />
-                                    
-                                </View>
-                                <Text style={styles.bodyTitle}>My Bids</Text>
-                                <Text style={styles.bodyText}>{CommaSepNum(291)}</Text>
-
-
-                            </TouchableOpacity>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>REGISTERED BANK</Text>
+                            <Text style={[styles.infoValue, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>GTBANK NIGERIA</Text>
                         </View>
                     </View>
 
-                    <Button
-                        mode='contained'
-                        buttonColor={theme.colors.navy}
-                        textColor={theme.colors.dullRed0}
-                        style={{ paddingVertical: 8, }}
-                        >Update Profile</Button>
+                    {/* Specs: Logout button as a subtle red text link at the very bottom, not a full button */}
+                    <View style={styles.logoutWrapper}>
+                        <TouchableOpacity style={styles.subtleRedLink} onPress={logout}>
+                            <Text style={styles.logoutLinkText}>Sign Out of Rebid</Text>
+                        </TouchableOpacity>
+                    </View>
 
                 </View>
-            </View>    
+            </ScrollView>
         </SafeAreaView>
-                        : 
-                        <ScreenLoaderIndicator/>
-    )
+    );
 }
 
 const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
-        backgroundColor: "rgba(238,226,222,0.5)",
-        marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
-    container: {
-        flex: 1,
-        paddingHorizontal: 8,
-        flexDirection: 'column',
-        gap: 16,
+    scrollContent: {
+        paddingBottom: 40,
     },
-    uploadIcon: {
-
-
-    },
-    header: {
-
-    },
-    subheader: {
-
+    navyHeaderBanner: {
+        backgroundColor: '#0D1B2A', // Specs: Deep navy background
+        paddingTop: Platform.OS === 'ios' ? 60 : 32, // Extends behind status bar
+        paddingBottom: 32,
         alignItems: 'center',
-        backgroundColor: theme.colors.navy,
-        borderBottomEndRadius: 200,
-        borderBottomLeftRadius: 200,
-        paddingTop: 20,
-        height: 200,
-        borderBottomWidth: 3,
-        borderBottomColor: theme.colors.dullRed1,
-
-
+        borderBottomLeftRadius: 28,
+        borderBottomRightRadius: 28,
+    },
+    topControlRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
+        marginBottom: 12,
+    },
+    themeToggleBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
+    avatarCenteredBlock: {
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    avatarWrapper: {
+        position: 'relative',
     },
     profileImg: {
-        borderRadius: 100,
-        width: 100,
-        height: 100,
-        position: 'absolute',
-        zIndex: 2,
-        marginTop: 130,
-        borderWidth: 2,
-        borderColor: theme.colors.dullRed1
-
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        borderWidth: 3,
+        borderColor: '#FF6B35', // Specs: Avatar with edit ring (coral color outline)
+        backgroundColor: '#FFFFFF',
     },
-    title: {
+    cameraIconContainer: {
         position: 'absolute',
-        marginTop: 250,
-        fontSize: 30,
-
+        bottom: 0,
+        right: 0,
+        backgroundColor: '#FF6B35',
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#0D1B2A',
+    },
+    usernameText: {
+        fontSize: 20,
+        fontWeight: '900',
+        color: '#FFFFFF',
+        marginTop: 12,
+        fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
+    },
+    emailText: {
+        fontSize: 11,
+        color: 'rgba(255, 255, 255, 0.7)',
+        fontWeight: '600',
+        marginTop: 2,
+    },
+    container: {
+        paddingHorizontal: 16, // Specs: 16px horizontal padding
+    },
+    statsRowCard: {
+        flexDirection: 'row',
+        borderRadius: 16,
+        paddingVertical: 16,
+        marginTop: -20, // overlap card on top third splices
+        borderWidth: 1,
+        borderColor: 'rgba(13, 27, 42, 0.04)',
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 4,
+    },
+    statItem: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    statDivider: {
+        width: 1,
+        height: 30,
+        backgroundColor: 'rgba(255, 107, 53, 0.15)', // Coral tinted dividers
+    },
+    statCoralLabel: {
+        fontSize: 9,
+        fontWeight: '800',
+        color: '#FF6B35', // Specs: stats label in coral
+        letterSpacing: 0.8,
+    },
+    statValue: {
+        fontSize: 14,
+        fontWeight: '800',
+        marginTop: 4,
+    },
+    menuGrid: {
+        marginTop: 24, // Specs: 24px section spacing
+        gap: 12,
+    },
+    sectionHeaderTitle: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#64748B',
+        letterSpacing: 1.0,
+        marginBottom: 4,
+    },
+    tappableMenuCard: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(13, 27, 42, 0.04)',
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    tappableCardLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    iconCircleBg: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#FFE6DD',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    tappableCardTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    quickInfoCard: {
+        borderRadius: 16,
+        padding: 16,
+        marginTop: 24, // Specs: 24px section spacing
+        borderWidth: 1,
+        borderColor: 'rgba(13, 27, 42, 0.04)',
+        gap: 12,
     },
     infoRow: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginTop: '30%',
-        position: 'relative',
-        borderWidth: 0.5,
-        borderBottomColor: theme.colors.navy,
-        borderBottomEndRadius: 20,
-        borderBottomLeftRadius: 20,
-        backgroundColor: theme.colors.dullRed0,
-        padding: 10,
-    },
-    info: {},
-    infoTitle: {
-        fontSize: 20,
-
-    },
-    infoText: {},
-    body: {
-
-    },
-    bodyContainer: {
-        flexDirection: 'row',
-        // 
-        justifyContent: 'space-around',
-        marginTop: 10,
-    },
-    containerView: {
-        width: '40%',
-        height: 230,
-        backgroundColor: theme.colors.navy,
-        borderRadius: 20,
-        alignItems: 'center'
-    },
-    logoBG: {
-        width: 30,
-        height: 30,
-        backgroundColor: theme.colors.dullRed1,
-        borderRadius: 30,
+        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 3,
-        marginTop: 10,
     },
-    bodyTitle: {
-        fontSize: 20,
-        color: theme.colors.dullRed0
+    infoLabel: {
+        fontSize: 8,
+        fontWeight: '800',
+        color: '#94A3B8',
+        letterSpacing: 0.8,
     },
-    bodyText: {
-        color: theme.colors.dullRed0,
-        fontSize: 50,
-        margin: '10%'
+    infoValue: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    infoValueActive: {
+        color: '#FF6B35',
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.3,
+    },
+    logoutWrapper: {
+        marginTop: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    subtleRedLink: {
+        minWidth: 120,
+        minHeight: 48, // Accessibility target touch size
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    logoutLinkText: {
+        color: '#E11D48', // Specs: logout button as subtle red text link
+        fontSize: 13,
+        fontWeight: '800',
+        letterSpacing: 0.2,
     }
-
-})
+});
