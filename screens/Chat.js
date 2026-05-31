@@ -10,65 +10,71 @@ import {
     Image, 
     KeyboardAvoidingView, 
     Platform,
-    StatusBar 
+    StatusBar,
+    Dimensions
 } from 'react-native';
-import { theme } from '../config/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { CommaSepNum } from '../utilities/comma-sep-num';
+import Svg, { Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+
+const { width } = Dimensions.get('window');
 
 export function Chat({ navigation }) {
-    // Demo Conversations list representing bidders and item owners
+    // Demo Conversations list representing active bidders
     const [conversations, setConversations] = useState([
         {
             id: '1',
-            userName: 'Adebayo Johnson',
+            userName: 'Garba Audu',
             userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-            itemTitle: '2 Bedrooms Apartment in Ayobo',
-            itemImage: 'https://pictures-nigeria.jijistatic.com/128842763_ODk5LTIwNDgtYjE5MWUxZTZiMQ.webp',
-            lastMessage: 'Is your bid final at ₦5,600,000?',
+            itemTitle: 'Lagos Modern Mansionette',
+            itemImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=150',
+            lastMessage: 'Is your bid final at ₦145,000,000?',
             time: '12:42 PM',
             unread: true,
-            currentBid: 5600000,
-            role: 'Owner'
+            currentBid: 145000000,
+            role: 'Seller'
         },
         {
             id: '2',
             userName: 'Chinedu Obi',
             userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-            itemTitle: 'Flower Decor With Pimples Pot',
-            itemImage: 'https://pictures-nigeria.jijistatic.com/107850170_MTUwMC0xMTI1LTdiY2MxMTU5OWQ.webp',
-            lastMessage: 'I can increase my bid increment by ₦500.',
+            itemTitle: 'Mercedes Benz G63 AMG 2025',
+            itemImage: 'https://images.unsplash.com/photo-1520050206274-a1ae446cb3cc?w=150',
+            lastMessage: 'I will increase my bid increment by ₦5,000,000.',
             time: 'Yesterday',
             unread: false,
-            currentBid: 9500,
+            currentBid: 92000000,
             role: 'Bidder'
         },
         {
             id: '3',
             userName: 'Sarah Williams',
             userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-            itemTitle: 'Quality WC Seats',
-            itemImage: 'https://pictures-nigeria.jijistatic.com/110614223_NzU2LTEwMDgtMzNkNzE5MDdkZQ.webp',
+            itemTitle: 'Premium Sapphire Pendant',
+            itemImage: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=150',
             lastMessage: 'When is the auction window closing?',
             time: '2 days ago',
             unread: false,
-            currentBid: 23000,
-            role: 'Owner'
+            currentBid: 4200000,
+            role: 'Seller'
         }
     ]);
 
     const [activeConv, setActiveConv] = useState(conversations[0]);
     const [messages, setMessages] = useState([
-        { id: '1', text: 'Hi Sarah, I am interested in the Ayobo apartment auction.', sender: 'me', time: '11:15 AM' },
-        { id: '2', text: 'Hello! Thanks for your bid. The auction is highly active right now.', sender: 'them', time: '11:20 AM' },
-        { id: '3', text: 'Yes, I noticed. Is your bid final at ₦5,600,000?', sender: 'them', time: '11:22 AM' }
+        { id: '1', type: 'message', text: 'Hi Garba, I am interested in the Lekki mansionette lot.', sender: 'me', time: '11:15 AM' },
+        { id: '2', type: 'message', text: 'Hello! Thanks for your bid. The auction is highly active right now.', sender: 'them', time: '11:20 AM' },
+        { id: '3', type: 'event', text: '🔥 Garba Audu placed ₦145M on Lagos Mansionette', sender: 'system', time: '11:21 AM' },
+        { id: '4', type: 'message', text: 'Yes, I noticed. Is your bid final at ₦145,000,000?', sender: 'them', time: '11:22 AM' }
     ]);
     const [inputText, setInputText] = useState('');
+    const [focusedInput, setFocusedInput] = useState(false);
 
     const handleSendMessage = () => {
         if (inputText.trim() === '') return;
         const newMsg = {
             id: (messages.length + 1).toString(),
+            type: 'message',
             text: inputText,
             sender: 'me',
             time: 'Just now'
@@ -79,26 +85,31 @@ export function Chat({ navigation }) {
 
     return (
         <SafeAreaView style={styles.wrapper}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
             <KeyboardAvoidingView 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
                 style={styles.keyboardContainer}>
                 
-                {/* Header */}
+                {/* Header: Locked Shield + Encrypted Channel */}
                 <View style={styles.header}>
                     <TouchableOpacity 
                         style={styles.backButton} 
                         onPress={() => navigation.goBack()}>
-                        <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
+                        <Ionicons name="arrow-back" size={20} color="#F1F5F9" />
                     </TouchableOpacity>
+                    
                     <View style={styles.headerTitleContainer}>
+                        <View style={styles.secureHeaderRow}>
+                            <Ionicons name="shield-checkmark" size={14} color="#00D97E" />
+                            <Text style={styles.secureLabel}>SECURE ENCRYPTED CHANNEL</Text>
+                        </View>
                         <Text style={styles.headerTitle}>{activeConv.userName}</Text>
-                        <Text style={styles.headerSubtitle}>{activeConv.role} of bidded item</Text>
                     </View>
+                    
                     <Image source={{ uri: activeConv.userAvatar }} style={styles.headerAvatar} />
                 </View>
 
-                {/* Collapsible Glass Item Info Bar */}
+                {/* Frosted Context Bar */}
                 <View style={styles.itemContextBar}>
                     <Image source={{ uri: activeConv.itemImage }} style={styles.contextImage} />
                     <View style={styles.contextDetails}>
@@ -106,19 +117,32 @@ export function Chat({ navigation }) {
                         <Text style={styles.contextPrice}>Active Bid: ₦{CommaSepNum(activeConv.currentBid)}</Text>
                     </View>
                     <View style={styles.gavelBadge}>
-                        <Ionicons name="hammer" size={14} color="#FFFFFF" />
+                        <Ionicons name="hammer" size={12} color="#0A0F1E" />
                     </View>
                 </View>
 
-                {/* Main Chat Flow */}
+                {/* Main Chat Feed */}
                 <FlatList
                     data={messages}
                     contentContainerStyle={styles.messagesList}
                     renderItem={({ item }) => {
+                        if (item.type === 'event') {
+                            return (
+                                <View style={styles.eventPillContainer}>
+                                    <View style={styles.eventPill}>
+                                        <Text style={styles.eventText}>{item.text}</Text>
+                                    </View>
+                                </View>
+                            );
+                        }
+
                         const isMe = item.sender === 'me';
                         return (
                             <View style={[styles.messageBubbleContainer, isMe ? styles.myBubbleAlign : styles.theirBubbleAlign]}>
-                                <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
+                                <View style={[
+                                    styles.bubble, 
+                                    isMe ? styles.myBubble : styles.theirBubble
+                                ]}>
                                     <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
                                         {item.text}
                                     </Text>
@@ -131,9 +155,9 @@ export function Chat({ navigation }) {
                     showsVerticalScrollIndicator={false}
                 />
 
-                {/* Conversation Selector (Horizontal Glass Slider) */}
+                {/* Conversation Selector Slider at Bottom */}
                 <View style={styles.selectorWrapper}>
-                    <Text style={styles.selectorHeader}>Active Bid Chats</Text>
+                    <Text style={styles.selectorHeader}>Active Lot Bid Channels</Text>
                     <FlatList
                         data={conversations}
                         horizontal
@@ -147,10 +171,9 @@ export function Chat({ navigation }) {
                                     style={[styles.selectorItem, isActive && styles.activeSelectorItem]}
                                     onPress={() => {
                                         setActiveConv(item);
-                                        // Reset sample messages based on conversation
                                         setMessages([
-                                            { id: '1', text: `Hi! Let's discuss the lot: ${item.itemTitle}`, sender: 'me', time: '10:00 AM' },
-                                            { id: '2', text: item.lastMessage, sender: 'them', time: item.time }
+                                            { id: '1', type: 'message', text: `Hi! Let's discuss the lot: ${item.itemTitle}`, sender: 'me', time: '10:00 AM' },
+                                            { id: '2', type: 'message', text: item.lastMessage, sender: 'them', time: item.time }
                                         ]);
                                     }}>
                                     <Image source={{ uri: item.userAvatar }} style={styles.selectorAvatar} />
@@ -167,19 +190,34 @@ export function Chat({ navigation }) {
                     />
                 </View>
 
-                {/* Input Bar */}
+                {/* Input Bar: #111827 bg, TextInput active coral outline */}
                 <View style={styles.inputBar}>
                     <TextInput
-                        style={styles.textInput}
+                        style={[
+                            styles.textInput,
+                            focusedInput && styles.focusedTextInput
+                        ]}
                         value={inputText}
                         onChangeText={setInputText}
-                        placeholder="Type message here..."
-                        placeholderTextColor={theme.colors.outline}
+                        onFocus={() => setFocusedInput(true)}
+                        onBlur={() => setFocusedInput(false)}
+                        placeholder="Type message..."
+                        placeholderTextColor="#64748B"
+                        selectionColor="#FF6B35"
                     />
                     <TouchableOpacity 
                         style={styles.sendButton} 
                         activeOpacity={0.8}
                         onPress={handleSendMessage}>
+                        <Svg height="44" width="44" style={StyleSheet.absoluteFillObject}>
+                            <Defs>
+                                <LinearGradient id="coralSend" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <Stop offset="0%" stopColor="#FF6B35" />
+                                    <Stop offset="100%" stopColor="#FF4500" />
+                                </LinearGradient>
+                            </Defs>
+                            <Rect width="100%" height="100%" rx="22" fill="url(#coralSend)" />
+                        </Svg>
                         <Ionicons name="send" size={16} color="#FFFFFF" />
                     </TouchableOpacity>
                 </View>
@@ -192,7 +230,7 @@ export function Chat({ navigation }) {
 const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
-        backgroundColor: theme.colors.dullRed0, // Soft Ice-Blue canvas
+        backgroundColor: '#0A0F1E',
     },
     keyboardContainer: {
         flex: 1,
@@ -200,88 +238,97 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.4)',
+        paddingHorizontal: 16,
+        paddingTop: Platform.OS === 'ios' ? 44 : 20,
+        paddingBottom: 12,
+        backgroundColor: '#111827',
+        borderBottomWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
     },
     backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: theme.roundness.full,
+        width: 38,
+        height: 38,
+        borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: theme.colors.surfaceContainerLow,
+        backgroundColor: '#1C2333',
     },
     headerTitleContainer: {
         flex: 1,
-        marginLeft: theme.spacing.md,
+        marginLeft: 12,
+    },
+    secureHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    secureLabel: {
+        fontSize: 9,
+        fontWeight: '700',
+        color: '#00D97E',
+        letterSpacing: 1,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: theme.colors.primary,
-    },
-    headerSubtitle: {
-        fontSize: 12,
-        color: theme.colors.outline,
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#F1F5F9',
         marginTop: 2,
     },
     headerAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: theme.roundness.full,
-        backgroundColor: theme.colors.surfaceContainer,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        borderWidth: 1,
+        borderColor: '#F5C518',
     },
     itemContextBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.8)', // Glassmorphic context bar
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.5)',
-        marginHorizontal: theme.spacing.md,
-        marginTop: theme.spacing.sm,
-        padding: theme.spacing.sm,
-        borderRadius: theme.roundness.lg, // 16px corner radius
-        ...theme.shadows.glass,
+        backgroundColor: '#111827',
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+        marginHorizontal: 16,
+        marginTop: 12,
+        padding: 10,
+        borderRadius: 16,
     },
     contextImage: {
-        width: 40,
-        height: 40,
-        borderRadius: theme.roundness.sm,
-        backgroundColor: theme.colors.surfaceContainer,
+        width: 36,
+        height: 36,
+        borderRadius: 8,
     },
     contextDetails: {
         flex: 1,
-        marginLeft: theme.spacing.sm,
+        marginLeft: 10,
     },
     contextTitle: {
         fontSize: 13,
         fontWeight: '700',
-        color: theme.colors.primary,
+        color: '#F1F5F9',
     },
     contextPrice: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: theme.colors.dullRed1,
+        fontSize: 11,
+        color: '#00D97E',
         marginTop: 2,
+        fontWeight: '600',
     },
     gavelBadge: {
-        width: 28,
-        height: 28,
-        borderRadius: theme.roundness.full,
-        backgroundColor: theme.colors.primary,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#F5C518',
         justifyContent: 'center',
         alignItems: 'center',
     },
     messagesList: {
-        padding: theme.spacing.md,
-        paddingBottom: theme.spacing.lg,
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 24,
+        gap: 16,
     },
     messageBubbleContainer: {
-        marginBottom: theme.spacing.md,
         maxWidth: '80%',
+        marginBottom: 2,
     },
     myBubbleAlign: {
         alignSelf: 'flex-end',
@@ -292,127 +339,144 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
     },
     bubble: {
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
-        borderRadius: theme.roundness.lg,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 16,
     },
     myBubble: {
-        backgroundColor: theme.colors.dullRed1, // Outgoing is Electric Coral
-        borderBottomRightRadius: 4,
-        ...theme.shadows.button,
+        backgroundColor: '#FF6B35',
+        borderBottomRightRadius: 2,
     },
     theirBubble: {
-        backgroundColor: 'rgba(255, 255, 255, 0.8)', // Incoming is Glass white
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.5)',
-        borderBottomLeftRadius: 4,
-        ...theme.shadows.glass,
+        backgroundColor: '#1C2333',
+        borderBottomLeftRadius: 2,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
     },
     messageText: {
-        fontSize: 15,
-        lineHeight: 22,
+        fontSize: 14,
+        lineHeight: 20,
     },
     myMessageText: {
         color: '#FFFFFF',
         fontWeight: '600',
     },
     theirMessageText: {
-        color: theme.colors.primary,
+        color: '#CBD5E1',
         fontWeight: '500',
     },
     messageTime: {
         fontSize: 10,
-        color: theme.colors.outline,
+        color: '#64748B',
         marginTop: 4,
-        marginHorizontal: 6,
+        paddingHorizontal: 4,
+    },
+    eventPillContainer: {
+        alignItems: 'center',
+        marginVertical: 8,
+    },
+    eventPill: {
+        backgroundColor: '#111827',
+        borderRadius: 12,
+        paddingVertical: 6,
+        paddingHorizontal: 14,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.04)',
+    },
+    eventText: {
+        color: '#64748B',
+        fontSize: 11,
+        fontStyle: 'italic',
+        fontWeight: '600',
     },
     selectorWrapper: {
-        backgroundColor: 'rgba(252, 248, 250, 0.8)',
-        paddingVertical: theme.spacing.md,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.4)',
+        backgroundColor: '#111827',
+        paddingVertical: 12,
+        borderTopWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
     },
     selectorHeader: {
         fontSize: 11,
-        fontWeight: 'bold',
-        color: theme.colors.primary,
+        fontWeight: '700',
+        color: '#64748B',
         textTransform: 'uppercase',
         letterSpacing: 1,
-        marginLeft: theme.spacing.md,
-        marginBottom: theme.spacing.sm,
+        marginLeft: 16,
+        marginBottom: 8,
     },
     selectorList: {
-        paddingHorizontal: theme.spacing.md,
-        gap: theme.spacing.sm,
+        paddingHorizontal: 16,
+        gap: 8,
     },
     selectorItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.4)',
-        borderRadius: theme.roundness.xl, // 28px rounded-xl
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        gap: 10,
-        ...theme.shadows.glass,
+        backgroundColor: '#1C2333',
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+        borderRadius: 20,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        gap: 8,
     },
     activeSelectorItem: {
-        backgroundColor: theme.colors.navy,
-        borderColor: theme.colors.dullRed1,
-        ...theme.shadows.button,
+        borderColor: '#FF6B35',
+        backgroundColor: '#0A0F1E',
     },
     selectorAvatar: {
-        width: 36,
-        height: 36,
-        borderRadius: theme.roundness.full,
-        backgroundColor: theme.colors.surfaceContainerLow,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
     },
     selectorTextBlk: {
         justifyContent: 'center',
     },
     selectorName: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '700',
-        color: theme.colors.primary,
-        width: 75,
+        color: '#CBD5E1',
+        width: 60,
     },
     activeSelectorText: {
         color: '#FFFFFF',
     },
     selectorRole: {
-        fontSize: 9,
-        color: theme.colors.outline,
-        marginTop: 1,
+        fontSize: 8,
+        color: '#64748B',
+        fontWeight: '700',
+        textTransform: 'uppercase',
     },
     inputBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.md,
-        backgroundColor: '#FFFFFF',
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.4)',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#111827',
+        borderTopWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
     },
     textInput: {
         flex: 1,
         height: 44,
-        backgroundColor: theme.colors.dullRed0,
-        borderRadius: theme.roundness.md,
-        paddingHorizontal: theme.spacing.md,
-        color: theme.colors.primary,
+        backgroundColor: '#0A0F1E',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        color: '#F1F5F9',
         fontSize: 14,
-        borderWidth: 1,
-        borderColor: 'rgba(0, 0, 0, 0.05)',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    focusedTextInput: {
+        borderColor: '#FF6B35',
+        backgroundColor: 'rgba(255, 107, 53, 0.03)',
     },
     sendButton: {
         width: 44,
         height: 44,
-        borderRadius: theme.roundness.full,
-        backgroundColor: theme.colors.dullRed1, // Electric Coral CTA button
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
-        marginLeft: theme.spacing.sm,
-        ...theme.shadows.button,
+        marginLeft: 10,
+        position: 'relative',
     }
 });

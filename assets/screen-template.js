@@ -16,9 +16,7 @@ import {
     Platform,
 } from 'react-native';
 import { TextInput,Button } from 'react-native-paper';
-import { theme } from '../config/theme';
-import { authentication } from '../config/firebase.config';
-import { db } from '../config/firebase.config';
+
 
 
 

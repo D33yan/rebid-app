@@ -1,8 +1,6 @@
 import { createContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
-import { authentication } from "./firebase.config";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const AppContext = createContext();
 
@@ -11,29 +9,26 @@ function AppProvider({ children }) {
     const [userToken, setUserToken] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Synchronize React State with Firebase Auth Changes
+    // Synchronize React State with JWT Session
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(authentication, async (user) => {
+        const loadSession = async () => {
             setIsLoading(true);
-            if (user) {
-                // User is authenticated
-                setUserUID(user.uid);
-                setUserToken(user.uid);
-                await AsyncStorage.setItem('userToken', user.uid);
-            } else {
-                // User is signed out
-                setUserUID(null);
-                setUserToken(null);
-                await AsyncStorage.removeItem('userToken');
+            try {
+                const token = await AsyncStorage.getItem('userToken');
+                if (token) {
+                    setUserUID(token);
+                    setUserToken(token);
+                }
+            } catch (error) {
+                console.error("Failed to load session:", error);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
-        });
-
-        // Cleanup listener on unmount
-        return unsubscribe;
+        };
+        loadSession();
     }, []);
 
-    // Explicit login helper (if manual trigger is needed)
+    // Explicit login helper
     const login = async (uid) => {
         setIsLoading(true);
         try {
@@ -47,14 +42,14 @@ function AppProvider({ children }) {
         }
     };
 
-    // Explicit logout helper to trigger Firebase Signout
+    // Explicit logout helper to clear session token
     const logout = async () => {
         setIsLoading(true);
         try {
-            await signOut(authentication);
             setUserUID(null);
             setUserToken(null);
             await AsyncStorage.removeItem('userToken');
+            await AsyncStorage.removeItem('rebid_jwt_token');
         } catch (error) {
             Alert.alert(
                 'Logout Error',

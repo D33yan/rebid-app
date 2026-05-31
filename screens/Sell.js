@@ -15,10 +15,9 @@ import { TextInput, Button } from 'react-native-paper';
 import { theme } from '../config/theme';
 import { useThemeToggle } from '../config/theme-context';
 import { useToast } from '../utilities/ToastService';
-import { db } from '../config/firebase.config';
 import { Formik } from 'formik';
 import * as yup from 'yup';
-import { addDoc, collection } from 'firebase/firestore';
+import { api } from '../utilities/api';
 import { Ionicons } from '@expo/vector-icons';
 import { categories } from '../assets/categories';
 
@@ -43,24 +42,23 @@ export function Sell({ navigation }) {
 
     const handleCreateAuction = async (values, resetForm) => {
         try {
-            await addDoc(collection(db, 'auctions'), {
+            await api.auctions.create({
                 title: values.title,
                 description: values.description,
-                initialPrice: String(values.initialPrice),
-                bidIncrement: String(values.bidIncrement),
+                initialPrice: Number(values.initialPrice),
+                bidIncrement: Number(values.bidIncrement),
                 photoUrl: values.photoUrl,
                 endDate: values.endDate,
                 category: selectedCategory,
-                createdAt: new Date().getTime(),
             });
 
             showToast('success', 'Auction Created Successfully!', 'Your luxury lot has been registered in the catalog.');
             resetForm();
             setCurrentStep(1);
-            navigation.navigate('Home');
+            navigation.navigate('my-home'); // Rebid main screen is my-home in stack navigation
         } catch (e) {
             console.error(e);
-            showToast('outbid', 'System Error', 'Failed to save auction lot onto Firestore.');
+            showToast('outbid', 'System Error', e.message || 'Failed to save auction lot onto Supabase database.');
         }
     };
 

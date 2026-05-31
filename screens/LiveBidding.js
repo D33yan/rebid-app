@@ -20,8 +20,10 @@ import { useThemeToggle } from '../config/theme-context';
 import { useToast } from '../utilities/ToastService';
 import { Ionicons } from '@expo/vector-icons';
 import { CommaSepNum } from '../utilities/comma-sep-num';
+import { api } from '../utilities/api';
+import Svg, { Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export function LiveBidding({ route, navigation }) {
     const { colors, isDarkMode } = useThemeToggle();
@@ -31,24 +33,25 @@ export function LiveBidding({ route, navigation }) {
     const { product } = route.params || {
         product: {
             id: '1',
-            title: 'Retro Nebula X-1',
-            desc: 'Extremely limited collector\'s hand-crafted mechanical galactic art piece featuring vintage brass dials and glowing vacuum tubes.',
-            imageUr: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=600',
-            numberOfBids: 52,
-            currentBid: 2450000,
-            initialPrice: 1800000,
-            bidIncrement: 10000,
-            category: 'Gadgets',
-            endsIn: '02:45:07'
+            title: 'Lagos Modern Mansionette',
+            description: 'Stunning 5-bedroom luxury smart-home located in premium Lekki Phase 1, Lagos.',
+            image_url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600',
+            current_price: 145000000,
+            initial_price: 120000000,
+            bid_increment: 5000000,
+            category: 'Real Estate',
+            end_date: new Date(Date.now() + 2 * 3600 * 1000).toISOString()
         }
     };
 
-    const minIncrement = product.bidIncrement || 10000;
-    const [bidAmount, setBidAmount] = useState(String(product.currentBid + minIncrement));
-    const [currentBidPrice, setCurrentBidPrice] = useState(product.currentBid);
-    const [totalBidsCount, setTotalBidsCount] = useState(product.numberOfBids);
+    const imageUrl = product.image_url || product.imageUr || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600';
+    const minIncrement = Number(product.bid_increment || product.bidIncrement || 100000);
+    const [currentBidPrice, setCurrentBidPrice] = useState(Number(product.current_price || product.currentBid || product.initial_price));
+    
+    // Calculated +5% Quick Bid amount
+    const quickBidAmount = Math.round(currentBidPrice * 1.05);
+    const [bidAmount, setBidAmount] = useState(String(currentBidPrice + minIncrement));
     const [isFavorited, setIsFavorited] = useState(false);
-    const [isHistoryExpanded, setIsHistoryExpanded] = useState(false); // Specs: expandable bid history
 
     // Ticking countdown states
     const [hours, setHours] = useState('02');
@@ -57,13 +60,12 @@ export function LiveBidding({ route, navigation }) {
 
     useEffect(() => {
         let totalSeconds = 2 * 3600 + 45 * 60 + 7;
-        if (product.endsIn && product.endsIn.includes(':')) {
-            const parts = product.endsIn.split(':');
-            if (parts.length === 3) {
-                totalSeconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+        const targetDate = product.end_date || product.endDate;
+        if (targetDate) {
+            const diffMs = new Date(targetDate).getTime() - Date.now();
+            if (diffMs > 0) {
+                totalSeconds = Math.floor(diffMs / 1000);
             }
-        } else {
-            totalSeconds = 28 * 3600 + 15 * 60;
         }
 
         const interval = setInterval(() => {
@@ -82,17 +84,18 @@ export function LiveBidding({ route, navigation }) {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [product.endsIn]);
+    }, [product.end_date, product.endDate]);
 
+    // Bidding attempts history ledger
     const [bidLogs, setBidLogs] = useState([
-        { id: '1', name: 'Adebayo Johnson', amount: 2450000, time: '1m ago', rating: '4.7 ★' },
-        { id: '2', name: 'Elena Rostova', amount: 2440000, time: '3m ago', rating: '4.9 ★' },
-        { id: '3', name: 'Sarah Williams', amount: 2420000, time: '6m ago', rating: '4.8 ★' },
-        { id: '4', name: 'Chinedu Obi', amount: 2400000, time: '12m ago', rating: '4.6 ★' }
+        { id: '1', name: 'Garba Audu', amount: currentBidPrice, time: '1m ago', status: 'WINNING' },
+        { id: '2', name: 'Elena Rostova', amount: currentBidPrice - minIncrement, time: '3m ago', status: 'OUTBID' },
+        { id: '3', name: 'Sarah Williams', amount: currentBidPrice - (minIncrement * 2), time: '6m ago', status: 'OUTBID' }
     ]);
 
-    const handlePlaceBid = () => {
-        const bidVal = parseInt(bidAmount);
+    // Handle transactional API bid placement
+    const handlePlaceBid = async (amountToBid) => {
+        const bidVal = Number(amountToBid || bidAmount);
         const minRequired = currentBidPrice + minIncrement;
         
         if (isNaN(bidVal) || bidVal < minRequired) {
@@ -100,25 +103,37 @@ export function LiveBidding({ route, navigation }) {
             return;
         }
 
-        const newLog = {
-            id: (bidLogs.length + 1).toString(),
-            name: 'Julian Sterling (You)',
-            amount: bidVal,
-            time: 'Just now',
-            rating: '5.0 ★'
-        };
+        try {
+            const data = await api.bids.place(product.id, bidVal);
+            setCurrentBidPrice(data.currentBid);
+            setBidAmount(String(Number(data.currentBid) + minIncrement));
+            
+            // Push leading bid attempt onto visual ledger
+            const newLog = {
+                id: Math.random().toString(),
+                name: 'Chidi (You)',
+                amount: bidVal,
+                time: 'Just now',
+                status: 'WINNING'
+            };
+            
+            // Map previous win to outbid state
+            const updatedLogs = bidLogs.map(log => ({
+                ...log,
+                status: 'OUTBID'
+            }));
 
-        setBidLogs([newLog, ...bidLogs]);
-        setCurrentBidPrice(bidVal);
-        setTotalBidsCount(prev => prev + 1);
-        setBidAmount(String(bidVal + minIncrement));
-
-        showToast('success', 'Bidding Registered', `Your bid of ₦${CommaSepNum(bidVal)} has been placed successfully!`);
+            setBidLogs([newLog, ...updatedLogs]);
+            showToast('success', 'Bidding Registered', data.message || `Your bid of ₦${CommaSepNum(bidVal)} has been placed successfully!`);
+        } catch (e) {
+            console.warn("Transactional bid placement failed:", e.message);
+            showToast('outbid', 'Bidding Failed', e.message || 'Transactional bid placement failed.');
+        }
     };
 
     return (
-        <SafeAreaView style={[styles.wrapper, { backgroundColor: isDarkMode ? '#060D14' : '#F7F7F8' }]}>
-            <StatusBar barStyle="light-content" />
+        <SafeAreaView style={styles.wrapper}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
             <KeyboardAvoidingView 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
                 style={{ flex: 1 }}>
@@ -127,16 +142,42 @@ export function LiveBidding({ route, navigation }) {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}>
                     
-                    {/* Full-screen aspect image with back arrow overlay */}
+                    {/* 1. Hero Image: Top 40% of screen */}
                     <View style={styles.imageHeaderWrapper}>
-                        <Image source={{ uri: product.imageUr }} style={styles.fullImage} />
+                        <Image source={{ uri: imageUrl }} style={styles.fullImage} />
                         
-                        {/* Overlay back and favorite icons */}
+                        {/* Custom SVG bottom fading mask */}
+                        <View style={StyleSheet.absoluteFillObject}>
+                            <Svg height="100%" width="100%">
+                                <Defs>
+                                    <LinearGradient id="heroMask" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <Stop offset="0%" stopColor="#0A0F1E" stopOpacity="0.4" />
+                                        <Stop offset="70%" stopColor="#0A0F1E" stopOpacity="0" />
+                                        <Stop offset="100%" stopColor="#0A0F1E" stopOpacity="0.9" />
+                                    </LinearGradient>
+                                </Defs>
+                                <Rect width="100%" height="100%" fill="url(#heroMask)" />
+                            </Svg>
+                        </View>
+
+                        {/* Pulsing Live Badge Overlay */}
+                        <View style={styles.liveBadge}>
+                            <View style={styles.pulsingDot} />
+                            <Text style={styles.liveBadgeText}>LIVE</Text>
+                        </View>
+
+                        {/* Top Right Countdown Badge */}
+                        <View style={styles.timerOverlayBadge}>
+                            <Ionicons name="time" size={12} color="#FFFFFF" />
+                            <Text style={styles.timerOverlayText}>{hours}:{minutes}:{seconds}</Text>
+                        </View>
+
+                        {/* Back and favorite controls overlay */}
                         <View style={styles.headerOverlayRow}>
                             <TouchableOpacity 
                                 style={styles.overlayBtn} 
                                 onPress={() => navigation.goBack()}>
-                                <Ionicons name="arrow-back" size={22} color="#0D1B2A" />
+                                <Ionicons name="arrow-back" size={20} color="#F1F5F9" />
                             </TouchableOpacity>
                             
                             <TouchableOpacity 
@@ -147,153 +188,104 @@ export function LiveBidding({ route, navigation }) {
                                 }}>
                                 <Ionicons 
                                     name={isFavorited ? "heart" : "heart-outline"} 
-                                    size={22} 
-                                    color={isFavorited ? '#E11D48' : '#0D1B2A'} 
+                                    size={20} 
+                                    color={isFavorited ? '#FF4560' : '#F1F5F9'} 
                                 />
                             </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.timerOverlayBadge}>
-                            <Ionicons name="time" size={12} color="#FFFFFF" />
-                            <Text style={styles.timerOverlayText}>{hours}:{minutes}:{seconds}</Text>
                         </View>
                     </View>
 
-                    <View style={styles.container}>
+                    {/* 2. Bidding Terminal Card: #1C2333, rises over the image */}
+                    <View style={styles.terminalContainer}>
                         
-                        {/* Specs: Seller details below image (avatar + name + rating) */}
-                        <View style={[styles.sellerCard, { backgroundColor: isDarkMode ? '#1A2A3A' : '#FFFFFF' }]}>
-                            <Image 
-                                source={require('../assets/user.jpg')} 
-                                style={styles.sellerAvatar} 
-                            />
-                            <View style={styles.sellerMeta}>
-                                <Text style={[styles.sellerName, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>Alhaji Garba Audu</Text>
-                                <Text style={styles.sellerRating}>Verified Premier Seller • 4.9 ★ (128 sales)</Text>
-                            </View>
-                            <TouchableOpacity 
-                                style={styles.chatSellerBtn}
-                                onPress={() => navigation.navigate('chat')}>
-                                <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FF6B35" />
-                            </TouchableOpacity>
+                        <View style={styles.terminalHeader}>
+                            <Text style={styles.lotCategory}>{product.category || 'Luxury'}</Text>
+                            <Text style={styles.assetName}>{product.title}</Text>
+                            <Text style={styles.assetDesc}>{product.description || 'Certified luxury lot listed securely by Rebid verified seller.'}</Text>
                         </View>
 
-                        {/* Item Info block */}
-                        <View style={styles.infoCard}>
-                            <Text style={[styles.cardCategory, { color: '#FF6B35' }]}>
-                                {product.category.toUpperCase()} • LOT #{product.id}
-                            </Text>
-                            <Text style={[styles.itemTitle, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>
-                                {product.title}
-                            </Text>
-                            <Text style={styles.itemDescription}>
-                                {product.desc || 'Certified authentic luxury lot. Comes complete with high-end certificate overlays, packaging, and premier mechanical verification papers.'}
-                            </Text>
-                        </View>
-
-                        {/* Specs: Current Bid in large coral text & countdown */}
-                        <View style={[styles.bidsCard, { backgroundColor: isDarkMode ? '#1A2A3A' : '#FFFFFF' }]}>
-                            <View style={styles.bidsHeader}>
+                        {/* Highest Bidder Details Card Row */}
+                        <View style={styles.highestBidderCard}>
+                            <View style={styles.bidderProfileRow}>
+                                <Image source={require('../assets/user.jpg')} style={styles.bidderAvatar} />
                                 <View>
-                                    <Text style={styles.cardLabel}>CURRENT HIGHEST BID</Text>
-                                    {/* Large Coral Text */}
-                                    <Text style={styles.coralPrice}>
-                                        ₦{CommaSepNum(currentBidPrice)}
-                                    </Text>
-                                </View>
-                                <View style={styles.bidsBiddersBadge}>
-                                    <Text style={styles.biddersText}>{totalBidsCount} active bidders</Text>
+                                    <Text style={styles.bidderLabel}>LEADING BIDDER</Text>
+                                    <Text style={styles.bidderName}>{bidLogs[0]?.name || 'Garba Audu'}</Text>
                                 </View>
                             </View>
-
-                            <View style={styles.cardDivider} />
-
-                            <Text style={styles.countdownTitle}>LOT EXPIRATION COUNTDOWN</Text>
-                            <View style={styles.timerGridRow}>
-                                <View style={styles.timerBox}>
-                                    <Text style={styles.timerBoxVal}>{hours}</Text>
-                                    <Text style={styles.timerBoxUnit}>HRS</Text>
-                                </View>
-                                <Text style={styles.timerSep}>:</Text>
-                                <View style={styles.timerBox}>
-                                    <Text style={styles.timerBoxVal}>{minutes}</Text>
-                                    <Text style={styles.timerBoxUnit}>MIN</Text>
-                                </View>
-                                <Text style={styles.timerSep}>:</Text>
-                                <View style={styles.timerBox}>
-                                    <Text style={styles.timerBoxVal}>{seconds}</Text>
-                                    <Text style={styles.timerBoxUnit}>SEC</Text>
-                                </View>
-                            </View>
+                            <Text style={styles.bidderAmount}>₦{CommaSepNum(currentBidPrice)}</Text>
                         </View>
 
-                        {/* Specs: Expandable Bid History section */}
-                        <View style={[styles.expandableHistoryContainer, { backgroundColor: isDarkMode ? '#1A2A3A' : '#FFFFFF' }]}>
-                            <TouchableOpacity 
-                                style={styles.expandableHeader}
-                                activeOpacity={0.8}
-                                onPress={() => setIsHistoryExpanded(!isHistoryExpanded)}>
-                                <View style={styles.expHeaderLeft}>
-                                    <Ionicons name="list" size={16} color="#FF6B35" />
-                                    <Text style={[styles.expHeaderTitle, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>
-                                        Expandable Bid History ({bidLogs.length})
-                                    </Text>
-                                </View>
-                                <Ionicons 
-                                    name={isHistoryExpanded ? "chevron-up" : "chevron-down"} 
-                                    size={18} 
-                                    color="#FF6B35" 
-                                />
-                            </TouchableOpacity>
+                        {/* Next Min Bid requirements */}
+                        <View style={styles.minBidRow}>
+                            <Text style={styles.minBidLabel}>MINIMUM REQUIRED NEXT BID</Text>
+                            <Text style={styles.minBidVal}>₦{CommaSepNum(currentBidPrice + minIncrement)}</Text>
+                        </View>
 
-                            {isHistoryExpanded && (
-                                <View style={styles.expandableContent}>
-                                    {bidLogs.map((log) => (
-                                        <View key={log.id} style={styles.historyLogItem}>
-                                            <View style={styles.historyLogLeft}>
-                                                <Ionicons name="person-circle-outline" size={24} color="#64748B" />
-                                                <View style={styles.historyLogMeta}>
-                                                    <Text style={[styles.historyLogName, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A' }]}>
-                                                        {log.name}
-                                                    </Text>
-                                                    <Text style={styles.historyLogRating}>{log.rating} rating</Text>
-                                                </View>
-                                            </View>
-                                            <View style={styles.historyLogRight}>
-                                                <Text style={[styles.historyLogPrice, { color: '#FF6B35' }]}>
-                                                    ₦{CommaSepNum(log.amount)}
-                                                </Text>
-                                                <Text style={styles.historyLogTime}>{log.time}</Text>
+                        {/* +5% Quick Bid full-width Coral Gradient CTA */}
+                        <TouchableOpacity 
+                            style={styles.quickBidBtn}
+                            activeOpacity={0.9}
+                            onPress={() => handlePlaceBid(quickBidAmount)}>
+                            <Svg height="56" width={width - 32} style={StyleSheet.absoluteFillObject}>
+                                <Defs>
+                                    <LinearGradient id="coralQuick" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <Stop offset="0%" stopColor="#FF6B35" />
+                                        <Stop offset="100%" stopColor="#FF4500" />
+                                    </LinearGradient>
+                                </Defs>
+                                <Rect width="100%" height="100%" rx="14" fill="url(#coralQuick)" />
+                            </Svg>
+                            <Text style={styles.quickBidText}>⚡ QUICK BID ₦{CommaSepNum(quickBidAmount)} (+5%)</Text>
+                        </TouchableOpacity>
+
+                        {/* Custom Input below with active coral state */}
+                        <View style={styles.customInputRow}>
+                            <Text style={styles.customLabel}>OR SUBMIT CUSTOM BID (₦)</Text>
+                            <TextInput 
+                                style={styles.customInput}
+                                value={bidAmount}
+                                onChangeText={setBidAmount}
+                                keyboardType="number-pad"
+                                selectionColor="#FF6B35"
+                            />
+                            <TouchableOpacity 
+                                style={styles.customSubmitBtn}
+                                activeOpacity={0.8}
+                                onPress={() => handlePlaceBid()}>
+                                <Text style={styles.customSubmitText}>SUBMIT</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Bid History Ledger flat list */}
+                        <View style={styles.ledgerBlock}>
+                            <Text style={styles.ledgerTitle}>Bidding Log History</Text>
+                            {bidLogs.map((log) => {
+                                const isWin = log.status === 'WINNING';
+                                return (
+                                    <View 
+                                        key={log.id} 
+                                        style={[
+                                            styles.ledgerRow, 
+                                            isWin ? styles.winningRow : styles.outbidRow
+                                        ]}>
+                                        <View style={styles.ledgerBidderBlock}>
+                                            <Image source={require('../assets/user.jpg')} style={styles.ledgerAvatar} />
+                                            <View>
+                                                <Text style={styles.ledgerName}>{log.name}</Text>
+                                                <Text style={styles.ledgerTime}>{log.time}</Text>
                                             </View>
                                         </View>
-                                    ))}
-                                </View>
-                            )}
+                                        <Text style={[styles.ledgerAmount, { color: isWin ? '#00D97E' : '#FF4560' }]}>
+                                            ₦{CommaSepNum(log.amount)}
+                                        </Text>
+                                    </View>
+                                );
+                            })}
                         </View>
 
                     </View>
                 </ScrollView>
-
-                {/* Specs: Bid Input pre-filled with min increment & Place Bid CTA pinned to bottom */}
-                <View style={[styles.bottomStickyBar, { backgroundColor: isDarkMode ? '#060D14' : '#FFFFFF' }]}>
-                    <View style={styles.stickyInputWrapper}>
-                        <Text style={styles.stickyInputLabel}>PRE-FILLED MIN NEXT BID</Text>
-                        <TextInput
-                            style={[styles.stickyInput, { color: isDarkMode ? '#F0F0F0' : '#0D1B2A', backgroundColor: isDarkMode ? '#1A2A3A' : '#F7F7F8' }]}
-                            value={bidAmount}
-                            onChangeText={setBidAmount}
-                            keyboardType="number-pad"
-                        />
-                    </View>
-                    <TouchableOpacity 
-                        style={styles.stickyBidBtn} 
-                        activeOpacity={0.9}
-                        onPress={handlePlaceBid}>
-                        <Ionicons name="hammer-outline" size={16} color="#FFFFFF" />
-                        <Text style={styles.stickyBidBtnText}>PLACE BID</Text>
-                    </TouchableOpacity>
-                </View>
-
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -302,317 +294,276 @@ export function LiveBidding({ route, navigation }) {
 const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
+        backgroundColor: '#0A0F1E',
     },
     scrollContent: {
-        paddingBottom: 110,
+        paddingBottom: 40,
     },
     imageHeaderWrapper: {
+        height: height * 0.4,
         width: '100%',
-        height: 280,
         position: 'relative',
     },
     fullImage: {
         width: '100%',
         height: '100%',
-        resizeMode: 'cover',
     },
     headerOverlayRow: {
         position: 'absolute',
-        top: Platform.OS === 'ios' ? 44 : 16,
-        left: 16,
-        right: 16,
+        top: Platform.OS === 'ios' ? 44 : 20,
+        left: 20,
+        right: 20,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
     },
     overlayBtn: {
         width: 38,
         height: 38,
-        borderRadius: 19,
-        backgroundColor: 'rgba(255, 255, 255, 0.85)',
+        borderRadius: 10,
+        backgroundColor: 'rgba(10, 15, 30, 0.6)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    timerOverlayBadge: {
+    liveBadge: {
         position: 'absolute',
-        bottom: 12,
-        right: 12,
+        bottom: 16,
+        left: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(13, 27, 42, 0.85)',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 8,
+        backgroundColor: '#FF6B35',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        gap: 6,
+    },
+    pulsingDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#FFFFFF',
+    },
+    liveBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    timerOverlayBadge: {
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(10, 15, 30, 0.75)',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         gap: 4,
     },
     timerOverlayText: {
         color: '#FFFFFF',
-        fontSize: 10,
-        fontWeight: '800',
+        fontSize: 11,
+        fontWeight: '700',
     },
-    container: {
-        paddingHorizontal: 16, // Specs: 16px horizontal padding
+    terminalContainer: {
+        backgroundColor: '#1C2333',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        marginTop: -20,
+        padding: 16,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
     },
-    sellerCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderRadius: 16,
-        marginTop: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(13, 27, 42, 0.04)',
-        ...theme.shadows.glass,
+    terminalHeader: {
+        marginBottom: 20,
     },
-    sellerAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+    lotCategory: {
+        fontSize: 11,
+        color: '#FF6B35',
+        fontWeight: '700',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
-    sellerMeta: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    sellerName: {
-        fontSize: 14,
-        fontWeight: '800',
-    },
-    sellerRating: {
-        fontSize: 10,
-        color: '#64748B',
-        marginTop: 2,
-        fontWeight: '600',
-    },
-    chatSellerBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#FFE6DD',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    infoCard: {
-        marginTop: 16,
-        paddingHorizontal: 4,
-    },
-    cardCategory: {
-        fontSize: 8,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
-    itemTitle: {
+    assetName: {
         fontSize: 22,
-        fontWeight: '800',
+        fontWeight: '700',
+        color: '#F1F5F9',
         marginTop: 4,
-        lineHeight: 28,
-        fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
+        letterSpacing: -0.5,
     },
-    itemDescription: {
+    assetDesc: {
         fontSize: 13,
-        color: '#475569',
+        color: '#CBD5E1',
         lineHeight: 20,
         marginTop: 8,
     },
-    bidsCard: {
-        borderRadius: 16,
-        padding: 16,
-        marginTop: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(13, 27, 42, 0.04)',
-        ...theme.shadows.glass,
-    },
-    bidsHeader: {
+    highestBidderCard: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        backgroundColor: '#111827',
+        borderRadius: 16,
+        padding: 14,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+        marginBottom: 20,
     },
-    cardLabel: {
-        fontSize: 8,
-        fontWeight: '800',
-        color: '#94A3B8',
+    bidderProfileRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    bidderAvatar: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+    },
+    bidderLabel: {
+        fontSize: 9,
+        fontWeight: '700',
+        color: '#64748B',
         letterSpacing: 0.5,
     },
-    coralPrice: {
-        fontSize: 28,
-        fontWeight: '900',
-        color: '#FF6B35', // Specs: Large coral text current bid
-        fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
-        marginTop: 4,
-    },
-    bidsBiddersBadge: {
-        backgroundColor: 'rgba(255, 107, 53, 0.08)',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 8,
-    },
-    biddersText: {
-        color: '#FF6B35',
-        fontSize: 10,
-        fontWeight: '800',
-    },
-    cardDivider: {
-        height: 1,
-        backgroundColor: 'rgba(13, 27, 42, 0.05)',
-        marginVertical: 14,
-    },
-    countdownTitle: {
-        fontSize: 8,
-        fontWeight: '800',
-        color: '#94A3B8',
-        letterSpacing: 0.8,
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    timerGridRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-    },
-    timerBox: {
-        width: 50,
-        height: 48,
-        backgroundColor: 'rgba(13, 27, 42, 0.03)',
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(13, 27, 42, 0.05)',
-    },
-    timerBoxVal: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#0D1B2A',
-    },
-    timerBoxUnit: {
-        fontSize: 7,
-        color: '#64748B',
-        fontWeight: 'bold',
-        letterSpacing: 0.3,
+    bidderName: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#F1F5F9',
         marginTop: 2,
     },
-    timerSep: {
-        fontSize: 20,
-        color: '#FF6B35',
-        fontWeight: '800',
-        bottom: 4,
+    bidderAmount: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#00D97E',
     },
-    expandableHistoryContainer: {
-        borderRadius: 16,
-        padding: 16,
-        marginTop: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(13, 27, 42, 0.04)',
-        ...theme.shadows.glass,
-    },
-    expandableHeader: {
+    minBidRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        height: 32,
+        marginBottom: 20,
+        paddingHorizontal: 4,
     },
-    expHeaderLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+    minBidLabel: {
+        fontSize: 10,
+        color: '#64748B',
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
-    expHeaderTitle: {
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.2,
-    },
-    expandableContent: {
-        marginTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(13, 27, 42, 0.05)',
-        paddingTop: 12,
-    },
-    historyLogItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(13, 27, 42, 0.03)',
-    },
-    historyLogLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    historyLogMeta: {
-        justifyContent: 'center',
-    },
-    historyLogName: {
-        fontSize: 12,
+    minBidVal: {
+        fontSize: 14,
+        color: '#F1F5F9',
         fontWeight: '700',
     },
-    historyLogRating: {
+    quickBidBtn: {
+        width: '100%',
+        height: 56,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#FF6B35',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 24,
+        elevation: 6,
+        position: 'relative',
+        marginBottom: 24,
+    },
+    quickBidText: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    customInputRow: {
+        marginBottom: 24,
+        backgroundColor: '#111827',
+        borderRadius: 16,
+        padding: 14,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    customLabel: {
         fontSize: 9,
+        fontWeight: '700',
         color: '#64748B',
-        marginTop: 1,
+        letterSpacing: 0.5,
+        marginBottom: 8,
     },
-    historyLogRight: {
-        alignItems: 'flex-end',
+    customInput: {
+        height: 48,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        color: '#F1F5F9',
+        paddingHorizontal: 12,
+        fontSize: 16,
+        fontWeight: '700',
+        backgroundColor: '#0A0F1E',
+        marginBottom: 12,
     },
-    historyLogPrice: {
-        fontSize: 12,
-        fontWeight: '800',
+    customSubmitBtn: {
+        height: 44,
+        backgroundColor: '#FF6B35',
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    historyLogTime: {
-        fontSize: 9,
-        color: '#94A3B8',
-        marginTop: 1,
+    customSubmitText: {
+        color: '#FFFFFF',
+        fontWeight: '700',
+        fontSize: 13,
+        letterSpacing: 0.5,
     },
-    bottomStickyBar: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: Platform.OS === 'ios' ? 94 : 80,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(0, 0, 0, 0.05)',
+    ledgerBlock: {
+        marginTop: 10,
+    },
+    ledgerTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#F1F5F9',
+        marginBottom: 12,
+        letterSpacing: -0.2,
+    },
+    ledgerRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingBottom: Platform.OS === 'ios' ? 24 : 0,
-    },
-    stickyInputWrapper: {
-        flex: 1,
-        marginRight: 16,
-        justifyContent: 'center',
-    },
-    stickyInputLabel: {
-        fontSize: 8,
-        fontWeight: '800',
-        color: '#94A3B8',
-        letterSpacing: 0.5,
-        marginBottom: 4,
-    },
-    stickyInput: {
-        height: 44,
+        backgroundColor: '#111827',
         borderRadius: 12,
-        paddingHorizontal: 12,
-        fontSize: 14,
-        fontWeight: '800',
-        borderWidth: 1.5,
-        borderColor: '#FF6B35', // Highlight focus border
+        padding: 12,
+        marginBottom: 8,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
     },
-    stickyBidBtn: {
+    winningRow: {
+        borderLeftWidth: 3,
+        borderLeftColor: '#00D97E',
+    },
+    outbidRow: {
+        borderLeftWidth: 3,
+        borderLeftColor: '#FF4560',
+    },
+    ledgerBidderBlock: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FF6B35', // Specs: Warm coral Place Bid CTA
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 12,
-        gap: 6,
-        height: 44,
+        gap: 10,
     },
-    stickyBidBtnText: {
-        color: '#FFFFFF',
-        fontWeight: '800',
-        fontSize: 12,
-        letterSpacing: 0.5,
+    ledgerAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+    },
+    ledgerName: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#F1F5F9',
+    },
+    ledgerTime: {
+        fontSize: 11,
+        color: '#64748B',
+        marginTop: 2,
+    },
+    ledgerAmount: {
+        fontSize: 14,
+        fontWeight: '700',
     }
 });

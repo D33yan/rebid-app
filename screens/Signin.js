@@ -12,20 +12,18 @@ import {
     ScrollView,
     Dimensions
 } from 'react-native';
-import { TextInput, Button } from 'react-native-paper';
+import { TextInput } from 'react-native-paper';
 import { Formik } from 'formik';
-import { theme } from '../config/theme';
 import * as yup from 'yup';
-import { authentication } from '../config/firebase.config';
-import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { api, setAuthToken } from '../utilities/api';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
 
 const schema = yup.object().shape({
-    email: yup.string().email('Please enter a valid email').min(8).max(60).required('Email is required'),
-    password: yup.string().min(8, 'Password must be at least 8 characters').max(32).required('Password is required'),
+    email: yup.string().email('Please enter a valid email address').required('Email is required'),
+    password: yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
 });
 
 export function Signin({ navigation }) {
@@ -33,47 +31,39 @@ export function Signin({ navigation }) {
     const [focusedField, setFocusedField] = useState(null);
 
     const handleSignin = async (email, pass) => {
-        await signInWithEmailAndPassword(authentication, email, pass)
-            .then(() => {
-                onAuthStateChanged(authentication, (user) => {
-                    console.log("Logged in user:", user);
-                });
-                navigation.navigate('starter');
-            })
-            .catch((e) => Alert.alert(
+        try {
+            const data = await api.auth.login(email, pass);
+            await setAuthToken(data.token);
+            await login(data.user.id);
+            navigation.navigate('my-home');
+        } catch (e) {
+            Alert.alert(
                 'Status Report',
-                'Failed to sign in. Please verify your email and password.',
-                [{ text: 'Dismiss', onPress: () => console.error(e) }]
-            ));
+                e.message || 'Failed to sign in. Please verify your email and password.',
+                [{ text: 'Dismiss' }]
+            );
+        }
     };
 
     return (
         <SafeAreaView style={styles.wrapper}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
                 
-                {/* Specs: Subtle diagonal split or gradient at the top third */}
+                {/* 1. Top 35% of screen: diagonal SVG mask in #1C2333 */}
                 <View style={styles.diagonalSplitContainer}>
-                    <Svg height="220" width={width} viewBox={`0 0 ${width} 220`} preserveAspectRatio="none">
-                        <Defs>
-                            <LinearGradient id="headerGrad" x1="0" y1="0" x2="1" y2="1">
-                                <Stop offset="0%" stopColor="#0D1B2A" />
-                                <Stop offset="100%" stopColor="#1B2D42" />
-                            </LinearGradient>
-                        </Defs>
-                        {/* Diagonal Splice */}
-                        <Path d={`M0 0 H${width} V160 L0 220 Z`} fill="url(#headerGrad)" />
-                        {/* Coral secondary slice */}
-                        <Path d={`M0 160 L${width} 120 V150 Z`} fill="#FF6B35" opacity="0.3" />
+                    <Svg height="260" width={width} viewBox={`0 0 ${width} 260`} preserveAspectRatio="none">
+                        <Path d={`M0 0 H${width} V180 L0 240 Z`} fill="#1C2333" />
                     </Svg>
                     
-                    {/* Centered Logo and Tagline */}
+                    {/* Centered Logo and Screen Title */}
                     <View style={styles.brandWrapper}>
-                        <Text style={styles.brandName}>Rebid</Text>
-                        <Text style={styles.tagline}>Nigeria's Premium Mobile Auction Marketplace</Text>
+                        <Text style={styles.brandName}>REBID</Text>
+                        <Text style={styles.tagline}>Nigeria's Premium Auction Marketplace</Text>
                     </View>
                 </View>
 
+                {/* 2. Form Area sits on #111827 card with 24px top border-radius */}
                 <View style={styles.container}>
                     <View style={styles.formCard}>
                         <Text style={styles.formHeader}>Sign In</Text>
@@ -85,11 +75,12 @@ export function Signin({ navigation }) {
                         >
                             {({ handleChange, handleBlur, handleSubmit, values, touched, errors }) => (
                                 <>
-                                    {/* Outlined input with 12px corners and custom focus outline */}
+                                    {/* TextInputs with 12px corners, active borders, and coral glow tints */}
                                     <View style={styles.inputContainer}>
                                         <TextInput
                                             mode='outlined'
                                             keyboardType='email-address'
+                                            autoCapitalize='none'
                                             value={values.email}
                                             onChangeText={handleChange('email')}
                                             onBlur={(e) => {
@@ -98,14 +89,21 @@ export function Signin({ navigation }) {
                                             }}
                                             onFocus={() => setFocusedField('email')}
                                             label='Email Address'
-                                            textColor="#0D1B2A"
-                                            activeOutlineColor="#FF6B35" // Specs: Visible focus state
-                                            outlineColor={focusedField === 'email' ? '#FF6B35' : 'rgba(13, 27, 42, 0.15)'}
-                                            style={styles.textInput}
-                                            theme={{ roundness: 12 }} // Specs: 12px rounded corner inputs
+                                            textColor="#F1F5F9"
+                                            activeOutlineColor="#FF6B35"
+                                            outlineColor={focusedField === 'email' ? '#FF6B35' : 'rgba(255, 255, 255, 0.1)'}
+                                            placeholderTextColor="#64748B"
+                                            style={[
+                                                styles.textInput,
+                                                focusedField === 'email' && styles.focusedTextInput
+                                            ]}
+                                            theme={{ roundness: 12, colors: { surface: '#111827', onSurfaceVariant: '#64748B' } }}
                                         />
                                         {errors.email && touched.email ? (
-                                            <Text style={styles.errorText}>{errors.email}</Text>
+                                            <View style={styles.errorRow}>
+                                                <Ionicons name="warning-outline" size={14} color="#FF4560" />
+                                                <Text style={styles.errorText}>{errors.email}</Text>
+                                            </View>
                                         ) : null}
                                     </View>
 
@@ -113,6 +111,7 @@ export function Signin({ navigation }) {
                                         <TextInput
                                             mode='outlined'
                                             secureTextEntry={true}
+                                            autoCapitalize='none'
                                             value={values.password}
                                             onChangeText={handleChange('password')}
                                             onBlur={(e) => {
@@ -121,43 +120,53 @@ export function Signin({ navigation }) {
                                             }}
                                             onFocus={() => setFocusedField('password')}
                                             label='Password'
-                                            textColor="#0D1B2A"
+                                            textColor="#F1F5F9"
                                             activeOutlineColor="#FF6B35"
-                                            outlineColor={focusedField === 'password' ? '#FF6B35' : 'rgba(13, 27, 42, 0.15)'}
-                                            style={styles.textInput}
-                                            theme={{ roundness: 12 }}
+                                            outlineColor={focusedField === 'password' ? '#FF6B35' : 'rgba(255, 255, 255, 0.1)'}
+                                            placeholderTextColor="#64748B"
+                                            style={[
+                                                styles.textInput,
+                                                focusedField === 'password' && styles.focusedTextInput
+                                            ]}
+                                            theme={{ roundness: 12, colors: { surface: '#111827', onSurfaceVariant: '#64748B' } }}
                                         />
                                         {errors.password && touched.password ? (
-                                            <Text style={styles.errorText}>{errors.password}</Text>
+                                            <View style={styles.errorRow}>
+                                                <Ionicons name="warning-outline" size={14} color="#FF4560" />
+                                                <Text style={styles.errorText}>{errors.password}</Text>
+                                            </View>
                                         ) : null}
                                     </View>
                                      
-                                    {/* Full-width coral fill button */}
-                                    <Button 
-                                        mode='contained'
-                                        buttonColor="#FF6B35" // Specs: Warm coral accent fill
-                                        textColor="#FFFFFF"
-                                        style={styles.signInButton}
-                                        labelStyle={styles.btnLabel}
+                                    {/* Primary Button: 52px height, 14px radius, active coral glow */}
+                                    <TouchableOpacity 
+                                        style={styles.signInButton} 
+                                        activeOpacity={0.9}
                                         onPress={handleSubmit}>
-                                        Sign In
-                                    </Button>
+                                        <Text style={styles.btnLabel}>Sign In</Text>
+                                    </TouchableOpacity>
                                 </>
                             )}
                         </Formik>
                         
-                        {/* Specs: Social sign-in options (Google) */}
+                        {/* Social Divider Row */}
                         <View style={styles.socialDividerRow}>
                             <View style={styles.line} />
                             <Text style={styles.socialDividerText}>OR CONNECT WITH</Text>
                             <View style={styles.line} />
                         </View>
 
+                        {/* Google Button: White background, #1C1C1E border, Google logo vector, Continue with Google */}
                         <TouchableOpacity 
                             style={styles.googleBtn} 
                             activeOpacity={0.8}
                             onPress={() => Alert.alert("Google Authentication", "Initializing Google secure single sign-on...")}>
-                            <Ionicons name="logo-google" size={16} color="#0D1B2A" />
+                            <Svg width="18" height="18" viewBox="0 0 18 18" style={styles.googleIcon}>
+                                <Path fill="#EA4335" d="M9 3.6c1.6 0 3 .6 4.1 1.7l3-3C14.3.9 11.9 0 9 0 5.5 0 2.4 2 1 5l3.2 2.5c.7-2.3 2.9-3.9 4.8-3.9z" />
+                                <Path fill="#4285F4" d="M17.6 9.2c0-.6 0-1.2-.1-1.7H9v3.3h4.8c-.2 1.1-.8 2-1.8 2.6l3.2 2.5c1.8-1.7 2.4-4.2 2.4-6.7z" />
+                                <Path fill="#FBBC05" d="M4.2 10.8c-.2-.6-.3-1.2-.3-1.8s.1-1.2.3-1.8L1 4.7C.3 6 .0 7.4.0 9s.3 3 .9 4.3l3.3-2.5z" />
+                                <Path fill="#34A853" d="M9 18c2.4 0 4.5-.8 6-2.2l-3.2-2.5c-.8.5-1.8.8-2.8.8-2.9 0-5.3-2-6.2-4.7L.6 11.9C2.1 15.5 5.3 18 9 18z" />
+                            </Svg>
                             <Text style={styles.googleBtnText}>Continue with Google</Text>
                         </TouchableOpacity>
                     </View>
@@ -179,14 +188,14 @@ export function Signin({ navigation }) {
 const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
-        backgroundColor: '#F7F7F8', // Specs: Clean Off-White canvas
+        backgroundColor: '#0A0F1E',
     },
     scrollContainer: {
         paddingBottom: 40,
     },
     diagonalSplitContainer: {
         position: 'relative',
-        height: 230,
+        height: 240,
     },
     brandWrapper: {
         position: 'absolute',
@@ -197,36 +206,39 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     brandName: {
-        fontSize: 38,
-        fontWeight: '900',
-        color: '#FFFFFF', // Contrast white on navy diagonal split
-        fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
-        letterSpacing: -0.5,
+        fontSize: 36,
+        fontWeight: '800',
+        color: '#F1F5F9',
+        letterSpacing: 6,
     },
     tagline: {
         fontSize: 12,
         fontWeight: '600',
-        color: 'rgba(255, 255, 255, 0.8)',
+        color: '#64748B',
         marginTop: 6,
         textAlign: 'center',
-        letterSpacing: 0.2,
+        letterSpacing: 1,
     },
     container: {
-        paddingHorizontal: 16, // Specs: 16px horizontal padding
-        marginTop: -30, // overlap onto split gradient card
+        paddingHorizontal: 16,
+        marginTop: -30,
     },
     formCard: {
-        backgroundColor: '#FFFFFF', // solid white container
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(13, 27, 42, 0.05)',
+        backgroundColor: '#111827',
+        borderRadius: 24,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
         padding: 20,
-        ...theme.shadows.glass,
+        shadowColor: '#0A0F1E',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+        elevation: 8,
     },
     formHeader: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#0D1B2A',
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#F1F5F9',
         marginBottom: 20,
         fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
     },
@@ -234,33 +246,44 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     textInput: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#111827',
         fontSize: 14,
+        height: 54,
+    },
+    focusedTextInput: {
+        backgroundColor: 'rgba(255, 107, 53, 0.03)',
+    },
+    errorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 6,
+        paddingLeft: 4,
     },
     errorText: {
-        fontSize: 11,
-        color: '#E11D48',
-        marginTop: 4,
-        marginLeft: 4,
+        fontSize: 12,
+        color: '#FF4560',
         fontWeight: '600',
     },
     signInButton: {
         marginTop: 8,
-        borderRadius: 12, // 12px corners matching inputs
-        paddingVertical: 8,
-        shadowColor: '#FF6B35',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 4,
-        height: 48, // Accessibility target height
+        height: 52,
+        borderRadius: 14,
+        backgroundColor: '#FF6B35',
+        alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: '#FF6B35',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 24,
+        elevation: 6,
     },
     btnLabel: {
-        fontSize: 14,
-        fontWeight: '800',
-        letterSpacing: 0.5,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFFFFF',
         textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     socialDividerRow: {
         flexDirection: 'row',
@@ -271,11 +294,11 @@ const styles = StyleSheet.create({
     line: {
         flex: 1,
         height: 1,
-        backgroundColor: 'rgba(13, 27, 42, 0.08)',
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
     },
     socialDividerText: {
-        fontSize: 9,
-        fontWeight: '800',
+        fontSize: 10,
+        fontWeight: '700',
         color: '#64748B',
         letterSpacing: 0.8,
     },
@@ -283,17 +306,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1.5,
-        borderColor: '#0D1B2A', // Navy border
-        borderRadius: 12,
-        paddingVertical: 12,
-        gap: 8,
-        height: 48,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#1C1C1E',
+        borderRadius: 14,
+        height: 52,
+        gap: 10,
+    },
+    googleIcon: {
+        marginRight: 2,
     },
     googleBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0D1B2A',
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#111111',
     },
     existingUser: {
         flexDirection: 'row',
@@ -314,7 +340,7 @@ const styles = StyleSheet.create({
     },
     signUpLinkText: {
         fontSize: 13,
-        fontWeight: '800',
-        color: '#FF6B35', // Coral redirection link text
+        fontWeight: '700',
+        color: '#FF6B35',
     }
 });

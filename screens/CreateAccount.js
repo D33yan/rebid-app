@@ -11,22 +11,19 @@ import {
     ScrollView,
     Dimensions
 } from 'react-native';
-import { TextInput, Button } from 'react-native-paper';
+import { TextInput } from 'react-native-paper';
 import { Formik } from 'formik';
-import { theme } from '../config/theme';
 import * as yup from 'yup';
-import { authentication } from '../config/firebase.config';
-import { createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { db } from '../config/firebase.config';
-import { setDoc, doc } from 'firebase/firestore';
-import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { api, setAuthToken } from '../utilities/api';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
 
 const schema = yup.object().shape({
     fName: yup.string().min(2, 'First name is too short').required('First name is required'),
     lName: yup.string().min(2, 'Last name is too short').required('Last name is required'),
-    email: yup.string().email('Please enter a valid email').min(8).max(60).required('Email is required'),
+    email: yup.string().email('Please enter a valid email address').required('Email is required'),
     password: yup.string().min(8, 'Password must be at least 8 characters').max(32).required('Password is required'),
     passwordConfirmation: yup.string()
         .oneOf([yup.ref('password'), null], 'Passwords must match')
@@ -37,61 +34,44 @@ export function CreateAccount({ navigation }) {
     const [focusedField, setFocusedField] = useState(null);
 
     const handleCreateAccount = async (email, pass, fName, lName) => {
-        await createUserWithEmailAndPassword(authentication, email, pass)
-            .then(() => {
-                Alert.alert(
-                    'Status Report',
-                    'Your Rebid account was created successfully!',
-                    [{
-                        text: 'PROCEED',
-                        onPress: () => navigation.navigate('onboarding')
-                    }]
-                );
-
-                onAuthStateChanged(authentication, (user) => {
-                    if (user) {
-                        const uid = user.uid;
-                        setDoc(doc(db, 'users', uid), {
-                            firstName: fName,
-                            lastName: lName,
-                            email: email,
-                            createdAt: new Date().getTime(),
-                        });
-                    }
-                });
-            })
-            .catch((e) => Alert.alert(
+        try {
+            const data = await api.auth.register(fName, lName, email, pass);
+            await setAuthToken(data.token);
+            Alert.alert(
                 'Status Report',
-                'Failed to create account. Please verify details or try another email.',
-                [{ text: 'Dismiss', onPress: () => console.error(e) }]
-            ));
+                'Your Rebid account was created successfully!',
+                [{
+                    text: 'PROCEED',
+                    onPress: () => navigation.navigate('verification', { email, userId: data.user.id })
+                }]
+            );
+        } catch (e) {
+            Alert.alert(
+                'Status Report',
+                e.message || 'Failed to create account. Please verify details or try another email.',
+                [{ text: 'Dismiss' }]
+            );
+        }
     };
 
     return (
         <SafeAreaView style={styles.wrapper}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
                 
-                {/* Diagonal Splice gradient at the top third */}
+                {/* 1. Top 35% diagonal mask */}
                 <View style={styles.diagonalSplitContainer}>
-                    <Svg height="220" width={width} viewBox={`0 0 ${width} 220`} preserveAspectRatio="none">
-                        <Defs>
-                            <LinearGradient id="headerGrad" x1="0" y1="0" x2="1" y2="1">
-                                <Stop offset="0%" stopColor="#0D1B2A" />
-                                <Stop offset="100%" stopColor="#1B2D42" />
-                            </LinearGradient>
-                        </Defs>
-                        <Path d={`M0 0 H${width} V160 L0 220 Z`} fill="url(#headerGrad)" />
-                        <Path d={`M0 160 L${width} 120 V150 Z`} fill="#FF6B35" opacity="0.3" />
+                    <Svg height="260" width={width} viewBox={`0 0 ${width} 260`} preserveAspectRatio="none">
+                        <Path d={`M0 0 H${width} V180 L0 240 Z`} fill="#1C2333" />
                     </Svg>
                     
-                    {/* Centered Logo and Tagline */}
                     <View style={styles.brandWrapper}>
-                        <Text style={styles.brandName}>Rebid</Text>
-                        <Text style={styles.tagline}>Nigeria's Premium Mobile Auction Marketplace</Text>
+                        <Text style={styles.brandName}>REBID</Text>
+                        <Text style={styles.tagline}>Nigeria's Premium Auction Marketplace</Text>
                     </View>
                 </View>
 
+                {/* 2. Form Area on #111827 Card */}
                 <View style={styles.container}>
                     <View style={styles.formCard}>
                         <Text style={styles.formHeader}>Create Account</Text>
@@ -114,14 +94,20 @@ export function CreateAccount({ navigation }) {
                                             }}
                                             onFocus={() => setFocusedField('fName')}
                                             label='First Name'
-                                            textColor="#0D1B2A"
+                                            textColor="#F1F5F9"
                                             activeOutlineColor="#FF6B35"
-                                            outlineColor={focusedField === 'fName' ? '#FF6B35' : 'rgba(13, 27, 42, 0.15)'}
-                                            style={styles.textInput}
-                                            theme={{ roundness: 12 }}
+                                            outlineColor={focusedField === 'fName' ? '#FF6B35' : 'rgba(255, 255, 255, 0.1)'}
+                                            style={[
+                                                styles.textInput,
+                                                focusedField === 'fName' && styles.focusedTextInput
+                                            ]}
+                                            theme={{ roundness: 12, colors: { surface: '#111827', onSurfaceVariant: '#64748B' } }}
                                         />
                                         {errors.fName && touched.fName ? (
-                                            <Text style={styles.errorText}>{errors.fName}</Text>
+                                            <View style={styles.errorRow}>
+                                                <Ionicons name="warning-outline" size={14} color="#FF4560" />
+                                                <Text style={styles.errorText}>{errors.fName}</Text>
+                                            </View>
                                         ) : null}
                                     </View>
 
@@ -136,14 +122,20 @@ export function CreateAccount({ navigation }) {
                                             }}
                                             onFocus={() => setFocusedField('lName')}
                                             label='Last Name'
-                                            textColor="#0D1B2A"
+                                            textColor="#F1F5F9"
                                             activeOutlineColor="#FF6B35"
-                                            outlineColor={focusedField === 'lName' ? '#FF6B35' : 'rgba(13, 27, 42, 0.15)'}
-                                            style={styles.textInput}
-                                            theme={{ roundness: 12 }}
+                                            outlineColor={focusedField === 'lName' ? '#FF6B35' : 'rgba(255, 255, 255, 0.1)'}
+                                            style={[
+                                                styles.textInput,
+                                                focusedField === 'lName' && styles.focusedTextInput
+                                            ]}
+                                            theme={{ roundness: 12, colors: { surface: '#111827', onSurfaceVariant: '#64748B' } }}
                                         />
                                         {errors.lName && touched.lName ? (
-                                            <Text style={styles.errorText}>{errors.lName}</Text>
+                                            <View style={styles.errorRow}>
+                                                <Ionicons name="warning-outline" size={14} color="#FF4560" />
+                                                <Text style={styles.errorText}>{errors.lName}</Text>
+                                            </View>
                                         ) : null}
                                     </View>
 
@@ -151,6 +143,7 @@ export function CreateAccount({ navigation }) {
                                         <TextInput
                                             mode='outlined'
                                             keyboardType='email-address'
+                                            autoCapitalize='none'
                                             value={values.email}
                                             onChangeText={handleChange('email')}
                                             onBlur={(e) => {
@@ -159,14 +152,20 @@ export function CreateAccount({ navigation }) {
                                             }}
                                             onFocus={() => setFocusedField('email')}
                                             label='Email Address'
-                                            textColor="#0D1B2A"
+                                            textColor="#F1F5F9"
                                             activeOutlineColor="#FF6B35"
-                                            outlineColor={focusedField === 'email' ? '#FF6B35' : 'rgba(13, 27, 42, 0.15)'}
-                                            style={styles.textInput}
-                                            theme={{ roundness: 12 }}
+                                            outlineColor={focusedField === 'email' ? '#FF6B35' : 'rgba(255, 255, 255, 0.1)'}
+                                            style={[
+                                                styles.textInput,
+                                                focusedField === 'email' && styles.focusedTextInput
+                                            ]}
+                                            theme={{ roundness: 12, colors: { surface: '#111827', onSurfaceVariant: '#64748B' } }}
                                         />
                                         {errors.email && touched.email ? (
-                                            <Text style={styles.errorText}>{errors.email}</Text>
+                                            <View style={styles.errorRow}>
+                                                <Ionicons name="warning-outline" size={14} color="#FF4560" />
+                                                <Text style={styles.errorText}>{errors.email}</Text>
+                                            </View>
                                         ) : null}
                                     </View>
 
@@ -174,6 +173,7 @@ export function CreateAccount({ navigation }) {
                                         <TextInput
                                             mode='outlined'
                                             secureTextEntry={true}
+                                            autoCapitalize='none'
                                             value={values.password}
                                             onChangeText={handleChange('password')}
                                             onBlur={(e) => {
@@ -182,14 +182,20 @@ export function CreateAccount({ navigation }) {
                                             }}
                                             onFocus={() => setFocusedField('password')}
                                             label='Create Password'
-                                            textColor="#0D1B2A"
+                                            textColor="#F1F5F9"
                                             activeOutlineColor="#FF6B35"
-                                            outlineColor={focusedField === 'password' ? '#FF6B35' : 'rgba(13, 27, 42, 0.15)'}
-                                            style={styles.textInput}
-                                            theme={{ roundness: 12 }}
+                                            outlineColor={focusedField === 'password' ? '#FF6B35' : 'rgba(255, 255, 255, 0.1)'}
+                                            style={[
+                                                styles.textInput,
+                                                focusedField === 'password' && styles.focusedTextInput
+                                            ]}
+                                            theme={{ roundness: 12, colors: { surface: '#111827', onSurfaceVariant: '#64748B' } }}
                                         />
                                         {errors.password && touched.password ? (
-                                            <Text style={styles.errorText}>{errors.password}</Text>
+                                            <View style={styles.errorRow}>
+                                                <Ionicons name="warning-outline" size={14} color="#FF4560" />
+                                                <Text style={styles.errorText}>{errors.password}</Text>
+                                            </View>
                                         ) : null}
                                     </View>
 
@@ -197,6 +203,7 @@ export function CreateAccount({ navigation }) {
                                         <TextInput
                                             mode='outlined'
                                             secureTextEntry={true}
+                                            autoCapitalize='none'
                                             value={values.passwordConfirmation}
                                             onChangeText={handleChange('passwordConfirmation')}
                                             onBlur={(e) => {
@@ -205,26 +212,29 @@ export function CreateAccount({ navigation }) {
                                             }}
                                             onFocus={() => setFocusedField('passwordConfirmation')}
                                             label='Confirm Password'
-                                            textColor="#0D1B2A"
+                                            textColor="#F1F5F9"
                                             activeOutlineColor="#FF6B35"
-                                            outlineColor={focusedField === 'passwordConfirmation' ? '#FF6B35' : 'rgba(13, 27, 42, 0.15)'}
-                                            style={styles.textInput}
-                                            theme={{ roundness: 12 }}
+                                            outlineColor={focusedField === 'passwordConfirmation' ? '#FF6B35' : 'rgba(255, 255, 255, 0.1)'}
+                                            style={[
+                                                styles.textInput,
+                                                focusedField === 'passwordConfirmation' && styles.focusedTextInput
+                                            ]}
+                                            theme={{ roundness: 12, colors: { surface: '#111827', onSurfaceVariant: '#64748B' } }}
                                         />
                                         {errors.passwordConfirmation && touched.passwordConfirmation ? (
-                                            <Text style={styles.errorText}>{errors.passwordConfirmation}</Text>
+                                            <View style={styles.errorRow}>
+                                                <Ionicons name="warning-outline" size={14} color="#FF4560" />
+                                                <Text style={styles.errorText}>{errors.passwordConfirmation}</Text>
+                                            </View>
                                         ) : null}
                                     </View>
 
-                                    <Button 
-                                        mode='contained'
-                                        buttonColor="#FF6B35" // specs warm coral Accent
-                                        textColor="#FFFFFF"
-                                        style={styles.signUpButton}
-                                        labelStyle={styles.btnLabel}
+                                    <TouchableOpacity 
+                                        style={styles.signUpButton} 
+                                        activeOpacity={0.9}
                                         onPress={handleSubmit}>
-                                        Create Account
-                                    </Button>
+                                        <Text style={styles.btnLabel}>Create Account</Text>
+                                    </TouchableOpacity>
                                 </>
                             )}
                         </Formik>
@@ -247,14 +257,14 @@ export function CreateAccount({ navigation }) {
 const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
-        backgroundColor: '#F7F7F8', // Off-White Specs background
+        backgroundColor: '#0A0F1E',
     },
     scrollContainer: {
         paddingBottom: 40,
     },
     diagonalSplitContainer: {
         position: 'relative',
-        height: 230,
+        height: 240,
     },
     brandWrapper: {
         position: 'absolute',
@@ -265,36 +275,39 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     brandName: {
-        fontSize: 38,
-        fontWeight: '900',
-        color: '#FFFFFF',
-        fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
-        letterSpacing: -0.5,
+        fontSize: 36,
+        fontWeight: '800',
+        color: '#F1F5F9',
+        letterSpacing: 6,
     },
     tagline: {
         fontSize: 12,
         fontWeight: '600',
-        color: 'rgba(255, 255, 255, 0.8)',
+        color: '#64748B',
         marginTop: 6,
         textAlign: 'center',
-        letterSpacing: 0.2,
+        letterSpacing: 1,
     },
     container: {
         paddingHorizontal: 16,
         marginTop: -30,
     },
     formCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(13, 27, 42, 0.05)',
+        backgroundColor: '#111827',
+        borderRadius: 24,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
         padding: 20,
-        ...theme.shadows.glass,
+        shadowColor: '#0A0F1E',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+        elevation: 8,
     },
     formHeader: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#0D1B2A',
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#F1F5F9',
         marginBottom: 20,
         fontFamily: Platform.OS === 'ios' ? 'Outfit' : 'sans-serif',
     },
@@ -302,33 +315,44 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     textInput: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#111827',
         fontSize: 14,
+        height: 54,
+    },
+    focusedTextInput: {
+        backgroundColor: 'rgba(255, 107, 53, 0.03)',
+    },
+    errorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 6,
+        paddingLeft: 4,
     },
     errorText: {
-        fontSize: 11,
-        color: '#E11D48',
-        marginTop: 4,
-        marginLeft: 4,
+        fontSize: 12,
+        color: '#FF4560',
         fontWeight: '600',
     },
     signUpButton: {
         marginTop: 8,
-        borderRadius: 12,
-        paddingVertical: 8,
-        shadowColor: '#FF6B35',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 4,
-        height: 48,
+        height: 52,
+        borderRadius: 14,
+        backgroundColor: '#FF6B35',
+        alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: '#FF6B35',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 24,
+        elevation: 6,
     },
     btnLabel: {
-        fontSize: 14,
-        fontWeight: '800',
-        letterSpacing: 0.5,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFFFFF',
         textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     existingUser: {
         flexDirection: 'row',
@@ -349,7 +373,7 @@ const styles = StyleSheet.create({
     },
     signInLinkText: {
         fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '700',
         color: '#FF6B35',
     }
 });

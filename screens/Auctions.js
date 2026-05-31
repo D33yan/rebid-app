@@ -16,11 +16,9 @@ import {
 import { theme } from '../config/theme';
 import { useThemeToggle } from '../config/theme-context';
 import { useToast } from '../utilities/ToastService';
-import { db } from '../config/firebase.config';
-import { getDocs, collection } from 'firebase/firestore';
+import { api } from '../utilities/api';
 import { CommaSepNum } from '../utilities/comma-sep-num';
 import { Ionicons } from '@expo/vector-icons';
-import { demoProducts } from '../assets/demo-products';
 import { categories } from '../assets/categories';
 import Svg, { Circle, Path } from "react-native-svg";
 
@@ -39,34 +37,33 @@ export function Auctions({ route, navigation }) {
     const loadAuctions = async () => {
         setIsLoading(true);
         try {
-            const onSnap = await getDocs(collection(db, 'auctions'));
-            const dbAuctions = onSnap.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    title: data.title,
-                    desc: data.description || 'No description provided.',
-                    imageUr: data.photoUrl || 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=500',
-                    currentBid: parseInt(data.initialPrice) || 50000,
-                    numberOfBids: 1,
-                    endsIn: data.endDate || '2d 5h',
-                    category: 'Gadgets',
-                };
-            });
-            setAuctions([...demoProducts, ...dbAuctions]);
+            const data = await api.auctions.list(selectedCategory, searchQuery);
+            // Format to client keys
+            const formatted = data.map(item => ({
+                id: item.id,
+                title: item.title,
+                desc: item.description,
+                imageUr: item.image_url,
+                currentBid: Number(item.current_price),
+                numberOfBids: 1,
+                endsIn: item.end_date,
+                category: item.category
+            }));
+            setAuctions(formatted);
         } catch (error) {
-            console.error("Failed to load auctions, using demo products:", error);
-            setAuctions(demoProducts);
+            console.error("Failed to load auctions from API:", error);
         } finally {
             setTimeout(() => {
                 setIsLoading(false);
-            }, 1000);
+            }, 800);
         }
     };
 
     React.useEffect(() => {
         loadAuctions();
-        
+    }, [selectedCategory, searchQuery]);
+
+    React.useEffect(() => {
         Animated.loop(
             Animated.sequence([
                 Animated.timing(skeletonOpacity, {

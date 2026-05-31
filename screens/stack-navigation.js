@@ -10,6 +10,8 @@ import { Auctions } from "./Auctions";
 import { Chat } from "./Chat";
 import { LiveBidding } from "./LiveBidding";
 import { Onboarding } from "./Onboarding";
+import { Splash } from "./Splash";
+import { Verification } from "./Verification";
 
 const Stack = createNativeStackNavigator();
 
@@ -40,11 +42,15 @@ export function StackNavigation() {
         // </Stack.Navigator>
         <Stack.Navigator 
             screenOptions={{ headerShown:false }}
-            initialRouteName="my-home"
+            initialRouteName={userToken ? "my-home" : "splash"}
         >
+            <Stack.Screen name="splash" component={Splash}/>
+            <Stack.Screen name="verification" component={Verification}/>
             <Stack.Screen name="my-home" component={Home}/>
             <Stack.Screen name="starter" component={Starter}/>
             <Stack.Screen name="auctions" component={Auctions}/>
+            <Stack.Screen name="create-account" component={CreateAccount}/>
+            <Stack.Screen name="sign-in" component={Signin}/>
             <Stack.Screen name="chat" component={Chat}/>
             <Stack.Screen name="profile" component={Profile}/>
             <Stack.Screen name="live-bidding" component={LiveBidding}/>
